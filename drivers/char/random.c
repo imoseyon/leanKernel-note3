@@ -483,8 +483,8 @@ static __u32 const twist_table[8] = {
  * it's cheap to do so and helps slightly in the expected case where
  * the entropy is concentrated in the low-order bits.
  */
-static void _mix_pool_bytes(struct entropy_store *r, const void *in,
-			    int nbytes, __u8 out[64])
+static void __mix_pool_bytes(struct entropy_store *r, const void *in,
+			     int nbytes, __u8 out[64])
 {
 	unsigned long i, j, tap1, tap2, tap3, tap4, tap5;
 	int input_rotate;
@@ -536,21 +536,13 @@ static void _mix_pool_bytes(struct entropy_store *r, const void *in,
 			((__u32 *)out)[j] = r->pool[(i - j) & wordmask];
 }
 
-static void __mix_pool_bytes(struct entropy_store *r, const void *in,
-			     int nbytes, __u8 out[64])
-{
-	trace_mix_pool_bytes_nolock(r->name, nbytes, _RET_IP_);
-	_mix_pool_bytes(r, in, nbytes, out);
-}
-
 static void mix_pool_bytes(struct entropy_store *r, const void *in,
-			   int nbytes, __u8 out[64])
+			     int nbytes, __u8 out[64])
 {
 	unsigned long flags;
 
-	trace_mix_pool_bytes(r->name, nbytes, _RET_IP_);
 	spin_lock_irqsave(&r->lock, flags);
-	_mix_pool_bytes(r, in, nbytes, out);
+	__mix_pool_bytes(r, in, nbytes, out);
 	spin_unlock_irqrestore(&r->lock, flags);
 }
 
@@ -613,9 +605,6 @@ retry:
 			r->initialized = 1;
 	}
 
-	trace_credit_entropy_bits(r->name, nbits, entropy_count,
-				  r->entropy_total, _RET_IP_);
-
 	/* should we wake readers? */
 	if (r == &input_pool && entropy_count >= random_read_wakeup_thresh) {
 		wake_up_interruptible(&random_read_wait);
@@ -654,6 +643,8 @@ void add_device_randomness(const void *buf, unsigned int size)
 	mix_pool_bytes(&nonblocking_pool, &time, sizeof(time), NULL);
 }
 EXPORT_SYMBOL(add_device_randomness);
+
+static struct timer_rand_state input_timer_state;
 
 /*
  * This function adds entropy to the entropy "pool" by using timing
@@ -804,7 +795,11 @@ static ssize_t extract_entropy(struct entropy_store *r, void *buf,
  */
 static void xfer_secondary_pool(struct entropy_store *r, size_t nbytes)
 {
-	__u32	tmp[OUTPUT_POOL_WORDS];
+	union {
+		__u32	tmp[OUTPUT_POOL_WORDS];
+		long	hwrand[4];
+	} u;
+	int	i;
 
 	if (r->pull && r->entropy_count < nbytes * 8 &&
 	    r->entropy_count < r->poolinfo->POOLBITS) {
@@ -815,17 +810,23 @@ static void xfer_secondary_pool(struct entropy_store *r, size_t nbytes)
 		/* pull at least as many as BYTES as wakeup BITS */
 		bytes = max_t(int, bytes, random_read_wakeup_thresh / 8);
 		/* but never more than the buffer size */
-		bytes = min_t(int, bytes, sizeof(tmp));
+		bytes = min_t(int, bytes, sizeof(u.tmp));
 
 		DEBUG_ENT("going to reseed %s with %d bits "
 			  "(%d of %d requested)\n",
 			  r->name, bytes * 8, nbytes * 8, r->entropy_count);
 
-		bytes = extract_entropy(r->pull, tmp, bytes,
+		bytes = extract_entropy(r->pull, u.tmp, bytes,
 					random_read_wakeup_thresh / 8, rsvd);
-		mix_pool_bytes(r, tmp, bytes, NULL);
+		mix_pool_bytes(r, u.tmp, bytes, NULL);
 		credit_entropy_bits(r, bytes*8);
 	}
+	kmemcheck_mark_initialized(&u.hwrand, sizeof(u.hwrand));
+	for (i = 0; i < 4; i++)
+		if (arch_get_random_long(&u.hwrand[i]))
+			break;
+	if (i)
+		mix_pool_bytes(r, &u.hwrand, sizeof(u.hwrand), 0);
 }
 
 /*
@@ -890,16 +891,12 @@ retry:
 static void extract_buf(struct entropy_store *r, __u8 *out)
 {
 	int i;
-	union {
-		__u32 w[5];
-		unsigned long l[LONGS(EXTRACT_SIZE)];
-	} hash;
-	__u32 workspace[SHA_WORKSPACE_WORDS];
+	__u32 hash[5], __u32 workspace[SHA_WORKSPACE_WORDS];
 	__u8 extract[64];
 	unsigned long flags;
 
 	/* Generate a hash across the pool, 16 words (512 bits) at a time */
-	sha_init(hash.w);
+	sha_init(hash);
 	spin_lock_irqsave(&r->lock, flags);
 	for (i = 0; i < r->poolinfo->poolwords; i += 16)
 		sha_transform(hash.w, (__u8 *)(r->pool + i), workspace);
@@ -913,7 +910,7 @@ static void extract_buf(struct entropy_store *r, __u8 *out)
 	 * brute-forcing the feedback as hard as brute-forcing the
 	 * hash.
 	 */
-	__mix_pool_bytes(r, hash.w, sizeof(hash.w), extract);
+	__mix_pool_bytes(r, hash, sizeof(hash), extract);
 	spin_unlock_irqrestore(&r->lock, flags);
 
 	/*
