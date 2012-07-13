@@ -29,6 +29,8 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
 
+#include <linux/mmc/card.h>
+
 #include "sdhci.h"
 
 #define DRIVER_NAME "sdhci"
