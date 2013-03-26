@@ -227,11 +227,8 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	 * a policy only change the active clock if it is higher then the new
 	 * thermal level
 	 */
-
-	if (device->pwrscale.policy == NULL ||
-		pwr->thermal_pwrlevel > pwr->active_pwrlevel)
+	if (pwr->thermal_pwrlevel > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
-
 	mutex_unlock(&device->mutex);
 
 	return count;
@@ -286,11 +283,8 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	 * If there is no policy then move to max by default.  Otherwise only
 	 * move max if the current level happens to be higher then the new max
 	 */
-
-	if (device->pwrscale.policy == NULL ||
-		(max_level > pwr->active_pwrlevel))
+	if (max_level > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, max_level);
-
 	mutex_unlock(&device->mutex);
 
 	return count;
@@ -480,8 +474,7 @@ static int kgsl_pwrctrl_gpuclk_show(struct device *dev,
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-			pwr->pwrlevels[pwr->active_pwrlevel].gpu_freq);
+	return snprintf(buf, PAGE_SIZE, "%ld\n", kgsl_pwrctrl_active_freq(pwr));
 }
 
 static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
@@ -1145,7 +1138,7 @@ void kgsl_idle_check(struct work_struct *work)
 
 	mutex_lock(&device->mutex);
 
-	kgsl_pwrscale_idle(device);
+	kgsl_pwrscale_update(device);
 
 	if (device->state == KGSL_STATE_ACTIVE
 		   || device->state ==  KGSL_STATE_NAP) {
@@ -1243,6 +1236,8 @@ EXPORT_SYMBOL(kgsl_pre_hwaccess);
 static int
 _nap(struct kgsl_device *device)
 {
+	struct kgsl_power_stats stats;
+
 	switch (device->state) {
 	case KGSL_STATE_ACTIVE:
 		if (!device->ftbl->isidle(device)) {
@@ -1255,6 +1250,17 @@ _nap(struct kgsl_device *device)
 #endif
 
 		del_timer_sync(&device->hang_timer);
+
+		/*
+		 * Read HW busy counters before going to NAP state.
+		 * The data might be used by power scale govenors
+		 * independently of the HW activity. For example
+		 * the simple-on-demand governer will get the latest
+		 * busy_time data even if the gpu isn't active.
+		*/
+		device->ftbl->power_stats(device, &stats);
+		device->pwrscale.accum_stats.busy_time += stats.busy_time;
+
 		kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_OFF);
 		kgsl_pwrctrl_clk(device, KGSL_PWRFLAGS_OFF, KGSL_STATE_NAP);
 		kgsl_pwrctrl_set_state(device, KGSL_STATE_NAP);
@@ -1274,7 +1280,7 @@ _sleep_accounting(struct kgsl_device *device)
 {
 	kgsl_pwrctrl_busy_time(device, false);
 	device->pwrctrl.clk_stats.start = ktime_set(0, 0);
-	device->pwrctrl.time = 0;
+
 	kgsl_pwrscale_sleep(device);
 }
 
@@ -1445,7 +1451,7 @@ void kgsl_pwrctrl_enable(struct kgsl_device *device)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	/* Order pwrrail/clk sequence based upon platform */
 	kgsl_pwrctrl_pwrrail(device, KGSL_PWRFLAGS_ON);
-	kgsl_pwrctrl_pwrlevel_change(device, pwr->default_pwrlevel);
+	kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel);
 	kgsl_pwrctrl_clk(device, KGSL_PWRFLAGS_ON, KGSL_STATE_ACTIVE);
 	kgsl_pwrctrl_axi(device, KGSL_PWRFLAGS_ON);
 }
@@ -1587,7 +1593,6 @@ void kgsl_active_count_put(struct kgsl_device *device)
 	BUG_ON(!mutex_is_locked(&device->mutex));
 	BUG_ON(device->active_cnt == 0);
 
-	kgsl_pwrscale_idle(device);
 	if (device->active_cnt > 1) {
 		device->active_cnt--;
 		trace_kgsl_active_count(device,

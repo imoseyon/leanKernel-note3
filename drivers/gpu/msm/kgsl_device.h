@@ -222,7 +222,6 @@ struct kgsl_device {
 	struct work_struct ts_expired_ws;
 	struct list_head events;
 	struct list_head events_pending_list;
-	s64 on_time;
 
 	/* Postmortem Control switches */
 	int pm_regs_enabled;
@@ -321,11 +320,6 @@ struct kgsl_process_private {
 struct kgsl_device_private {
 	struct kgsl_device *device;
 	struct kgsl_process_private *process_priv;
-};
-
-struct kgsl_power_stats {
-	s64 total_time;
-	s64 busy_time;
 };
 
 struct kgsl_device *kgsl_get_device(int dev_idx);
