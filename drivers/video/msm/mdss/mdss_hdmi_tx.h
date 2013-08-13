@@ -83,8 +83,8 @@ struct hdmi_tx_ctrl {
 	bool mhl_connect_status;
 	u32 present_hdcp;
 
-	u8 spd_vendor_name[8];
-	u8 spd_product_description[16];
+	u8 spd_vendor_name[9];
+	u8 spd_product_description[17];
 
 	struct hdmi_tx_ddc_ctrl ddc_ctrl;
 
