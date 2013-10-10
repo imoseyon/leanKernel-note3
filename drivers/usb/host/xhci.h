@@ -1365,6 +1365,8 @@ struct xhci_bus_state {
 	u32			suspended_ports;
 	u32			port_remote_wakeup;
 	unsigned long		resume_done[USB_MAXCHILDREN];
+	/* which ports have started to resume */
+	unsigned long		resuming_ports;
 };
 
 static inline unsigned int hcd_index(struct usb_hcd *hcd)
@@ -1497,6 +1499,7 @@ struct xhci_hcd {
  * (16.66 ns x 5 = 84ns) ~100ns after writing to the PORTSC register.
  */
 #define XHCI_PORTSC_DELAY	(1 << 10)
+#define XHCI_TRUST_TX_LENGTH	(1 << 10)
 	unsigned int		num_active_eps;
 	unsigned int		limit_active_eps;
 	/* There are two roothubs to keep track of bus suspend info for */
