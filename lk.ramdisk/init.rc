@@ -1167,3 +1167,11 @@ on property:persist.sys.drs.enforce=1
 	start drs
 	setprop persist.sys.drs.enforce 0
 
+service lk-post-boot /sbin/lk-post-boot.sh
+     class late_start
+     user root
+     disabled
+     oneshot
+ 
+on property:sys.boot_completed=1
+     start lk-post-boot
