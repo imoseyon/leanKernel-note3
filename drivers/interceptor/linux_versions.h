@@ -51,11 +51,13 @@
 #warning "Kernel versions after 3.3.8 are not supported"
 #endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,3,8) && ... */
 
+#if 0
 /* 3.4.11 is the highest 3.4 version currently supported */
 #if LINUX_VERSION_CODE > KERNEL_VERSION(3,4,11) && \
   LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
 #warning "Kernel versions after 3.4.11 are not supported"
 #endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,4,11) && ... */
+#endif
 
 /* 2.4 is not supported */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
