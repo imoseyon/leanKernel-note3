@@ -27,10 +27,19 @@ unsigned long acpuclk_get_rate(int cpu)
 
 int acpuclk_set_rate(int cpu, unsigned long rate, enum setrate_reason reason)
 {
+	int ret;
+
 	if (!acpuclk_data || !acpuclk_data->set_rate)
 		return 0;
 
-	return acpuclk_data->set_rate(cpu, rate, reason);
+	trace_cpu_frequency_switch_start(acpuclk_get_rate(cpu), rate, cpu);
+	ret = acpuclk_data->set_rate(cpu, rate, reason);
+	if (!ret) {
+		trace_cpu_frequency_switch_end(cpu);
+		trace_cpu_frequency(rate, cpu);
+	}
+
+	return ret;
 }
 
 uint32_t acpuclk_get_switch_time(void)
