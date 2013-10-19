@@ -28,7 +28,7 @@
 #include <mach/scm.h>
 #include <mach/msm_memory_dump.h>
 #include <asm/cacheflush.h>
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
 
@@ -78,7 +78,7 @@ struct msm_watchdog_data {
 static int enable = 1;
 module_param(enable, int, 0);
 
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 static unsigned int regsave_vaddr;
 static unsigned int regsave_paddr;
 static unsigned long long last_pet;
@@ -239,7 +239,7 @@ static ssize_t wdog_disable_set(struct device *dev,
 static DEVICE_ATTR(disable, S_IWUSR | S_IRUSR, wdog_disable_get,
 							wdog_disable_set);
 
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 static unsigned long long last_emerg_pet;
 void emerg_pet_watchdog(void)
 {
@@ -279,7 +279,7 @@ static void pet_watchdog(struct msm_watchdog_data *wdog_dd)
 	if (slack_ns < wdog_dd->min_slack_ns)
 		wdog_dd->min_slack_ns = slack_ns;
 	wdog_dd->last_pet = time_ns;
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	last_pet = time_ns;
 #endif
 }
@@ -365,7 +365,7 @@ static irqreturn_t wdog_bark_handler(int irq, void *dev_id)
 	if (wdog_dd->do_ipi_ping)
 		dump_cpu_alive_mask(wdog_dd);
 
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	sec_debug_dump_stack();
 	dump_stack();
 	outer_flush_all();
@@ -388,7 +388,7 @@ static irqreturn_t wdog_ppi_bark(int irq, void *dev_id)
 	return wdog_bark_handler(irq, wdog_dd);
 }
 
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 unsigned int get_wdog_regsave_paddr(void)
 {
 	return __pa(&regsave_paddr);
@@ -413,7 +413,7 @@ static void configure_bark_dump(struct msm_watchdog_data *wdog_dd)
 	} cmd_buf;
 
 	wdog_dd->scm_regsave = (void *)__get_free_page(GFP_KERNEL);
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	printk(KERN_INFO "WDOG_V2 handled by TZ:dump @0x%08x PA:%08x\n",
 			(unsigned int) wdog_dd->scm_regsave,
 			(unsigned int) virt_to_phys(wdog_dd->scm_regsave));
@@ -499,7 +499,7 @@ static void init_watchdog_work(struct work_struct *work)
 	__raw_writel(1, wdog_dd->base + WDT0_EN);
 	__raw_writel(1, wdog_dd->base + WDT0_RST);
 	wdog_dd->last_pet = sched_clock();
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	last_pet = wdog_dd->last_pet;
 #endif
 	error = device_create_file(wdog_dd->dev, &dev_attr_disable);
@@ -548,7 +548,7 @@ static int __devinit msm_wdog_dt_to_pdata(struct platform_device *pdev,
 				__func__);
 		return -ENXIO;
 	}
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	wdog_base_addr = pdata->base;
 #endif
 
