@@ -61,7 +61,7 @@
 #include <mach/event_timer.h>
 #include <linux/cpu_pm.h>
 
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
 

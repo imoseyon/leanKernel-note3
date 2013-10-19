@@ -23,7 +23,7 @@
 #include <linux/input.h>
 #include <linux/log2.h>
 #include <linux/qpnp/power-on.h>
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
 
@@ -343,7 +343,7 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	}else if((cfg->key_code == 116) && !(pon_rt_sts & pon_rt_bit)){
 		pon->powerkey_state = 0;
 	}
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	sec_debug_check_crash_key(cfg->key_code, pon->powerkey_state);
 #endif
 #if defined(CONFIG_MACH_MONTBLANC)
@@ -628,7 +628,7 @@ qpnp_pon_request_irqs(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
 
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 		if (sec_debug_is_enabled()) {
 			rc = qpnp_pon_input_dispatch(pon, PON_KPDPWR);
 			if (rc)

@@ -238,11 +238,11 @@ restart:
 			kstat_incr_softirqs_this_cpu(vec_nr);
 
 			trace_softirq_entry(vec_nr);
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 			secdbg_msg("softirq %pS entry", h->action);
 #endif
 			h->action(h);
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 			secdbg_msg("softirq %pS exit", h->action);
 #endif
 			trace_softirq_exit(vec_nr);
@@ -342,7 +342,7 @@ void irq_exit(void)
 {
 	account_system_vtime(current);
 	trace_hardirq_exit();
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	secdbg_msg("hardirq exit");
 #endif
 	sub_preempt_count(IRQ_EXIT_OFFSET);

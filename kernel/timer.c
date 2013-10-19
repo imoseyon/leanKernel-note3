@@ -1120,11 +1120,11 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
 	lock_map_acquire(&lockdep_map);
 
 	trace_timer_expire_entry(timer);
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	secdbg_msg("timer %pS entry", fn);
 #endif
 	fn(data);
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	secdbg_msg("timer %pS exit", fn);
 #endif
 	trace_timer_expire_exit(timer);
