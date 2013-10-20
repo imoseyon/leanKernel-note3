@@ -2504,6 +2504,7 @@ S32 FIC_Init_Dec(U8 *fic, U8 fib_num, U8 CN)
 		if (ret == RTV_OK) {
 			if (ENS_DESC.svr_num) {
 				if ((ENS_DESC.svr_num == ENS_DESC.label_num)
+					&& (ENS_DESC.label_flag == 1)
 					&& (FIC_CONUT > 5)) {
 					FIC_CONUT = 0;
 					return FIC_DONE;
