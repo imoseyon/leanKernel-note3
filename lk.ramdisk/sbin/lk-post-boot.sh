@@ -6,3 +6,7 @@ pm disable com.sec.knox.seandroid
 
 /system/xbin/busybox run-parts /system/etc/init.d
 /system/xbin/busybox run-parts /sbin/init.d
+
+stop thermal-engine
+sleep 2
+start thermal-engine
