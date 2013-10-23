@@ -41,6 +41,7 @@
 	(((size) > (max_size)) || ((offset) > ((max_size) - (size))))
 
 bool first_update = false;
+extern bool cpufreq_screen_on;
 
 #ifdef CONFIG_FB_MSM_CAMERA_CSC
 u8 pre_csc_update = 0xFF;
@@ -2140,6 +2141,7 @@ static int mdss_mdp_overlay_on(struct msm_fb_data_type *mfd)
 	if (!mfd)
 		return -ENODEV;
 
+	cpufreq_screen_on = true;
 	mdp5_data = mfd_to_mdp5_data(mfd);
 
 	if (mfd->key != MFD_KEY)
