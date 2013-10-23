@@ -178,8 +178,8 @@ static int sec_therm_get_adc_data(struct sec_therm_info *info)
 		}
 		adc_data = results.adc_code;
 
-		pr_err("reading LR_MUX4_PU2_AMUX_THM1 [rc = %d] [adc_code = %d]\n",
-									rc,results.adc_code);
+//		pr_err("reading LR_MUX4_PU2_AMUX_THM1 [rc = %d] [adc_code = %d]\n",
+//									rc,results.adc_code);
 		if (i != 0) {
 			if (adc_data > adc_max)
 				adc_max = adc_data;
