@@ -33,7 +33,7 @@
 		<26 512 0 1600000>, <89 604 0 1600000>,
 		<26 512 0 2400000>, <89 604 0 3000000>,
 		/* Nominal / SVS */
-		<26 512 0 4656000>, <89 604 0 3000000>,
+		<26 512 0 3680000>, <89 604 0 3000000>,
 		/* Nominal */
 		<26 512 0 4656000>, <89 604 0 5120000>,
 		/* Turbo / Nominal */
@@ -71,14 +71,14 @@
 		qcom,gpu-pwrlevel@3 {
 			reg = <3>;
 			qcom,gpu-freq = <320000000>;
-			qcom,bus-freq = <5>;
+			qcom,bus-freq = <4>;
 			qcom,io-fraction = <66>;
 		};
 
 		qcom,gpu-pwrlevel@4 {
 			reg = <4>;
 			qcom,gpu-freq = <320000000>;
-			qcom,bus-freq = <4>;
+			qcom,bus-freq = <3>;
 			qcom,io-fraction = <66>;
 		};
 

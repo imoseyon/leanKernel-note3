@@ -843,6 +843,7 @@ int forced_to_download_binary(struct ssp_data *data, int iBinType)
 	}
 
 	proximity_open_lcd_ldi(data);
+	proximity_open_calibration(data);
 	accel_open_calibration(data);
 	gyro_open_calibration(data);
 	pressure_open_calibration(data);
