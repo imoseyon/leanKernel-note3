@@ -19,6 +19,7 @@
 #include <linux/major.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
+#include <linux/delay.h>
 
 #include "mdp3_ctrl.h"
 #include "mdp3.h"
@@ -442,11 +443,16 @@ static int mdp3_ctrl_on(struct msm_fb_data_type *mfd)
 		goto on_error;
 	}
 
-	rc = mdp3_session->dma->start(mdp3_session->dma, mdp3_session->intf);
-	if (rc) {
-		pr_err("fail to start the MDP display interface\n");
-		goto on_error;
-	}
+        if (mfd->fbi->screen_base) {
+                rc = mdp3_session->dma->start(mdp3_session->dma,
+                                                mdp3_session->intf);
+                if (rc) {
+                        pr_err("fail to start the MDP display interface\n");
+                        goto on_error;
+                }
+        } else {
+                mdp3_session->first_commit = true;
+        }
 
 on_error:
 	if (!rc)
@@ -621,6 +627,7 @@ static int mdp3_ctrl_display_commit_kickoff(struct msm_fb_data_type *mfd)
 {
 	struct mdp3_session_data *mdp3_session;
 	struct mdp3_img_data *data;
+	struct mdss_panel_info *panel_info = mfd->panel_info;
 	int rc = 0;
 
 	if (!mfd || !mfd->mdp.private1)
@@ -634,6 +641,11 @@ static int mdp3_ctrl_display_commit_kickoff(struct msm_fb_data_type *mfd)
 		pr_err("%s, display off!\n", __func__);
 		return -EPERM;
 	}
+
+        if (mdp3_bufq_count(&mdp3_session->bufq_in) == 0) {
+                pr_debug("no buffer in queue yet\n");
+                return -EPERM;
+        }
 
 	mutex_lock(&mdp3_session->lock);
 
@@ -649,6 +661,12 @@ static int mdp3_ctrl_display_commit_kickoff(struct msm_fb_data_type *mfd)
 		mdp3_put_img(data);
 	}
 
+        if (mdp3_session->first_commit) {
+                /*wait for one frame time to ensure frame is sent to panel*/
+                msleep(1000 / panel_info->mipi.frame_rate);
+                mdp3_session->first_commit = false;
+        }
+
 	mutex_unlock(&mdp3_session->lock);
 	return rc;
 }
@@ -659,6 +677,7 @@ static void mdp3_ctrl_pan_display(struct msm_fb_data_type *mfd)
 	struct mdp3_session_data *mdp3_session;
 	u32 offset;
 	int bpp;
+        struct mdss_panel_info *panel_info = mfd->panel_info;
 
 	pr_debug("mdp3_ctrl_pan_display\n");
 	if (!mfd || !mfd->mdp.private1)
@@ -688,6 +707,13 @@ static void mdp3_ctrl_pan_display(struct msm_fb_data_type *mfd)
 
 	mdp3_session->dma->update(mdp3_session->dma,
 				(void *)mfd->iova + offset);
+
+        if (mdp3_session->first_commit) {
+                /*wait for one frame time to ensure frame is sent to panel*/
+                msleep(1000 / panel_info->mipi.frame_rate);
+                mdp3_session->first_commit = false;
+        }
+
 pan_error:
 	mutex_unlock(&mdp3_session->lock);
 }
