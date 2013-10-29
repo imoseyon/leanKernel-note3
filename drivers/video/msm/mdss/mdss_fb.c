@@ -669,11 +669,11 @@ static void mdss_fb_scale_bl(struct msm_fb_data_type *mfd, u32 *bl_lvl)
 		 * scaling fraction (x/1024)
 		 */
 		temp = (temp * mfd->bl_scale) / 1024;
-
-		/*if less than minimum level, use min level*/
-		if (temp < mfd->bl_min_lvl)
-			temp = mfd->bl_min_lvl;
 	}
+	/*if less than minimum level, use min level*/
+	else if ((temp < mfd->bl_min_lvl) && (0 != temp))
+		temp = mfd->bl_min_lvl;
+
 	pr_debug("output = %d", temp);
 
 	(*bl_lvl) = temp;
@@ -690,7 +690,10 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 #if defined(CONFIG_DUAL_LCD)
 		mfd->bl_level = bkl_lvl;
 #endif
-		mfd->unset_bl_level = bkl_lvl;
+		if (bkl_lvl < mfd->bl_min_lvl)
+			mfd->unset_bl_level = mfd->bl_min_lvl;
+		else
+			mfd->unset_bl_level = bkl_lvl;
 		return;
 	} else {
 		mfd->unset_bl_level = 0;
