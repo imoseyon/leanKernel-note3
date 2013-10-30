@@ -1395,6 +1395,13 @@ static struct lcd_ops mipi_samsung_disp_props = {
 	.set_power = NULL,
 };
 
+static ssize_t cpufreq_screen_on_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", cpufreq_screen_on);
+}
+
+static DEVICE_ATTR(cpufreq_screen_on, S_IRUGO,
+			cpufreq_screen_on_show, NULL);
 
 static DEVICE_ATTR(lcd_power, S_IRUGO | S_IWUSR,
 			mipi_samsung_disp_get_power,
@@ -3283,6 +3290,7 @@ static struct attribute *panel_sysfs_attributes[] = {
 #if defined(PARTIAL_UPDATE)
 	&dev_attr_partial_disp.attr,
 #endif
+	&dev_attr_cpufreq_screen_on.attr,
 	NULL
 };
 static const struct attribute_group panel_sysfs_group = {
