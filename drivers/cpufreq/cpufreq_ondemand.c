@@ -28,6 +28,10 @@
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 
+extern bool cpufreq_screen_on;
+#define DEFAULT_SCREEN_OFF_MAX 1267200
+static unsigned long screen_off_max = DEFAULT_SCREEN_OFF_MAX;
+
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -130,7 +134,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 static
 #endif
 struct cpufreq_governor cpufreq_gov_ondemand = {
-       .name                   = "ondemand",
+       .name                   = "ondemandX",
        .governor               = cpufreq_governor_dbs,
        .max_transition_latency = TRANSITION_LATENCY_LIMIT,
        .owner                  = THIS_MODULE,
@@ -427,6 +431,30 @@ show_one(step_up_interim_hispeed, step_up_interim_hispeed);
 show_one(sampling_early_factor, sampling_early_factor);
 show_one(sampling_interim_factor, sampling_interim_factor);
 #endif
+
+static ssize_t show_screen_off_maxfreq(struct kobject *kobj,
+                                         struct attribute *attr, char *buf)
+{
+        return sprintf(buf, "%lu\n", screen_off_max);
+}
+
+static ssize_t store_screen_off_maxfreq(struct kobject *kobj,
+                                          struct attribute *attr,
+                                          const char *buf, size_t count)
+{
+         int ret;
+         unsigned long val;
+
+         ret = strict_strtoul(buf, 0, &val);
+         if (ret < 0) return ret;
+         if (val < 300000) screen_off_max = 2265600;
+         else screen_off_max = val;
+         return count;
+}
+
+static struct global_attr screen_off_maxfreq =
+        __ATTR(screen_off_maxfreq, 0666, show_screen_off_maxfreq,
+                store_screen_off_maxfreq);
 
 static ssize_t show_powersave_bias
 (struct kobject *kobj, struct attribute *attr, char *buf)
@@ -1069,6 +1097,7 @@ static struct attribute *dbs_attributes[] = {
 	&sampling_early_factor.attr,
 	&sampling_interim_factor.attr,
 #endif
+	&screen_off_maxfreq.attr,
 	NULL
 };
 
@@ -1083,9 +1112,11 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 {
 	if (dbs_tuners_ins.powersave_bias)
 		freq = powersave_bias_target(p, freq, CPUFREQ_RELATION_H);
-	else if (p->cur == p->max)
-		return;
+	else if (p->cur == p->max) 
+		if (likely(cpufreq_screen_on)) return;
 
+	if (unlikely(!cpufreq_screen_on))
+		if (freq > screen_off_max) freq = screen_off_max;
 	__cpufreq_driver_target(p, freq, dbs_tuners_ins.powersave_bias ?
 			CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
 }
