@@ -2086,8 +2086,6 @@ static int mdss_dsi_panel_dimming_init(struct mdss_panel_data *pdata)
 	}
 #endif
 
-	// reduce purple push
-	msd.dstat.temperature = -35;	
 	return 0;
 }
 
