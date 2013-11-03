@@ -88,6 +88,10 @@ on post-fs-data
     mkdir /tombstones/lpass 0771 system system
     mkdir /tombstones/wcnss 0771 system system
     mkdir /tombstones/dsps 0771 system system
+    chmod 0664 /sys/class/lcd/panel/panel_colors
+    chown system system /sys/class/lcd/panel/panel_colors
+    chmod 0664 /sys/class/lcd/panel/temperature
+    chown system system /sys/class/lcd/panel/temperature
 
 # Allow usb charging to be disabled peristently
 on property:persist.usb.chgdisabled=1
