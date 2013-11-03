@@ -1,0 +1,29 @@
+#!/system/bin/sh
+
+echo
+echo "leanKernel configurator"
+echo
+echo "---"
+echo "1) panel temperature"
+echo "2) panel color"
+echo
+echo -n "Please enter a number (or press enter to exit): "
+
+read option
+
+case $option in
+1) 
+	echo -n "Enter a number between -60 and 0 (0 is kernel default): "
+	read value
+	echo $value > /data/data/leankernel/paneltemp
+	echo $value > /sys/class/lcd/panel/temperature
+	echo "Done! (also will persist at boot)"
+	;;
+2)	
+	echo -n "Enter a number between 0 and 4 (2 is kernel default): "
+	read value
+	echo $value > /data/data/leankernel/panelcolor
+	echo $value > /sys/class/lcd/panel/panel_colors
+	echo "Turn off screen and back on (also will persist at boot)"
+	;;
+esac
