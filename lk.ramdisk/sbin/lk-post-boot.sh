@@ -6,8 +6,14 @@ chmod 755 /data/data/leankernel
 # panel temperature setting
 #
 PANELTMP="/data/data/leankernel/paneltemp"
-PANELTMPSF="/sys/devices/qcom,mdss_dsi_samsung_octa_1080p_cmd.71/lcd/panel/temperature"
-[ -f $PANELTMP ] && echo `cat $PANELTMP` > $PANELTMPSF
+PANELSF="/sys/class/lcd/panel/temperature"
+[ -f $PANELTMP ] && echo `cat $PANELTMP` > $PANELSF
+#
+# panel color control
+#
+PANELCLR="/data/data/leankernel/panelcolor"
+PANELSF="/sys/class/lcd/panel/panel_colors"
+[ -f $PANELCLR ] && echo `cat $PANELCLR` > $PANELSF
 
 # daemonsu support - probably not needed
 [ -f "/system/xbin/daemonsu" ] && /system/xbin/daemonsu --auto-daemon &
