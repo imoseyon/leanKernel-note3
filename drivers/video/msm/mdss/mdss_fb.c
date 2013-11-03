@@ -648,6 +648,9 @@ static struct platform_driver mdss_fb_driver = {
 	},
 };
 
+static int unset_bl_level, bl_updated;
+static int bl_level_old;
+
 static void mdss_fb_scale_bl(struct msm_fb_data_type *mfd, u32 *bl_lvl)
 {
 	u32 temp = *bl_lvl;
@@ -685,15 +688,14 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 	struct mdss_panel_data *pdata;
 	u32 temp = bkl_lvl;
 
-	if ((!mfd->panel_power_on || !mfd->bl_updated) &&
-	    !IS_CALIB_MODE_BL(mfd)) {
+	if ((!mfd->panel_power_on || !bl_updated) && !IS_CALIB_MODE_BL(mfd)) {
 #if defined(CONFIG_DUAL_LCD)
 		mfd->bl_level = bkl_lvl;
 #endif
-		mfd->unset_bl_level = bkl_lvl;
+		unset_bl_level = bkl_lvl;
 		return;
 	} else {
-		mfd->unset_bl_level = 0;
+		unset_bl_level = 0;
 	}
 
 	pdata = dev_get_platdata(&mfd->pdev->dev);
@@ -709,13 +711,13 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 		 * as well as setting bl_level to bkl_lvl even though the
 		 * backlight has been set to the scaled value.
 		 */
-		if (mfd->bl_level_old == temp) {
+		if (bl_level_old == temp) {
 			mfd->bl_level = bkl_lvl;
 			return;
 		}
 		pdata->set_backlight(pdata, temp);
 		mfd->bl_level = bkl_lvl;
-		mfd->bl_level_old = temp;
+		bl_level_old = temp;
 
 		if (mfd->mdp.update_ad_input) {
 			mutex_unlock(&mfd->bl_lock);
@@ -730,15 +732,15 @@ void mdss_fb_update_backlight(struct msm_fb_data_type *mfd)
 {
 	struct mdss_panel_data *pdata;
 
-	if (mfd->unset_bl_level && !mfd->bl_updated) {
+	if (unset_bl_level && !bl_updated) {
 		pdata = dev_get_platdata(&mfd->pdev->dev);
 		if ((pdata) && (pdata->set_backlight)) {
 			mutex_lock(&mfd->bl_lock);
-			mfd->bl_level = mfd->unset_bl_level;
+			mfd->bl_level = unset_bl_level;
 			pdata->set_backlight(pdata, mfd->bl_level);
-			mfd->bl_level_old = mfd->unset_bl_level;
+			bl_level_old = unset_bl_level;
 			mutex_unlock(&mfd->bl_lock);
-			mfd->bl_updated = 1;
+			bl_updated = 1;
 		}
 	}
 }
@@ -791,7 +793,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 			mfd->op_enable = false;
 			curr_pwr_state = mfd->panel_power_on;
 			mfd->panel_power_on = false;
-			mfd->bl_updated = 0;
+			bl_updated = 0;
 
 			ret = mfd->mdp.off_fnc(mfd);
 			if (ret)
