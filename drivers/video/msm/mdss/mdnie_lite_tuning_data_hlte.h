@@ -2922,11 +2922,11 @@ static char NEGATIVE_2[] = {
 	0xff, //scr Bg Rg
 	0xff, //scr Yb Cr
 	0x00, //scr Bb Rr
-	0x00, //scr Wr Wb
+	0x06, //scr Wr Wb
 	0xff, //scr Kr Kb
-	0x00, //scr Wg Wg
+	0x06, //scr Wg Wg
 	0xff, //scr Kg Kg
-	0x00, //scr Wb Wr
+	0x06, //scr Wb Wr
 	0xff, //scr Kb Kr
 	0x00, //curve 1 b
 	0x20, //curve 1 a

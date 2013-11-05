@@ -296,9 +296,7 @@ static void mdss_mdp_perf_mixer_update(struct mdss_mdp_mixer *mixer,
 	u32 v_total;
 	int i;
 	u32 max_clk_rate = 0, ab_total = 0, ib_total = 0;
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_WVGA_S6E88A0_PT_PANEL)
 	int pipe_cnt = 0, backend_cnt = 0; // QCT_0822
-#endif
 
 	*bus_ab_quota = 0;
 	*bus_ib_quota = 0;
@@ -346,23 +344,19 @@ static void mdss_mdp_perf_mixer_update(struct mdss_mdp_mixer *mixer,
 		ib_total += perf.ib_quota >> MDSS_MDP_BUS_FACTOR_SHIFT;
 		if (perf.mdp_clk_rate > max_clk_rate)
 			max_clk_rate = perf.mdp_clk_rate;
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_WVGA_S6E88A0_PT_PANEL)
 		// QCT_0822 [
 		pipe_cnt++;
 		if (pipe->flags & MDP_BACKEND_COMPOSITION)
 			backend_cnt++;
 		// QCT_0822 ]
-#endif
 	}
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_WVGA_S6E88A0_PT_PANEL)
 	//QCT_0822 [
-	if (pipe_cnt == 1 && backend_cnt == 0) {
+	if ((pipe_cnt == 1 && backend_cnt == 0) || pipe_cnt == 4) {
 		pr_debug("GPU fall-back case, ab/ib will be increased to 10 percent \n");
 		ab_total = (ab_total*11)/10;
 		ib_total = (ib_total*11)/10;
 	}
 	//QCT_0822 ]
-#endif
 
 	*bus_ab_quota += ab_total;
 	*bus_ib_quota += ib_total;

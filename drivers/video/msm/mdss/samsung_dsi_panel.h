@@ -93,6 +93,7 @@ struct display_status {
 	int curr_aid_idx;
 	int curr_gamma_idx;
 	int bright_level;
+	int	recent_bright_level;
 
 	int temperature;
 	char temperature_value;
