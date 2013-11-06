@@ -619,6 +619,7 @@ on boot
 # Permissions for Camera
    chown system radio /sys/class/camera/rear/rear_camfw
    chown system radio /sys/class/camera/rear/rear_camtype
+   chown system radio /sys/class/camera/rear/rear_camfw_load
    chown system radio /sys/class/camera/flash/rear_flash
    chown system radio /sys/class/camera/front/front_camfw
    chown system radio /sys/class/camera/front/front_camtype
