@@ -2,16 +2,24 @@
 
 echo
 echo "leanKernel configurator"
-echo
 echo "---"
+echo "0) display current settings"
 echo "1) panel temperature"
 echo "2) panel color"
 echo
-echo -n "Please enter a number (or press enter to exit): "
+echo -n "please enter a number (or press enter to exit): "
 
 read option
 
 case $option in
+0)
+	echo "current settings"
+	echo "----------------"
+	echo -n "1) panel temperature: "
+	cat /sys/class/lcd/panel/temperature
+	echo -n "2) panel color: "
+	cat /sys/class/lcd/panel/panel_colors
+	;;
 1) 
 	echo -n "Enter a number between -60 and 0 (0 is kernel default): "
 	read value
