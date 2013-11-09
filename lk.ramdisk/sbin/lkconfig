@@ -1,11 +1,14 @@
 #!/system/bin/sh
 
+while true; do
+
 echo
 echo "leanKernel configurator"
 echo "---"
 echo "0) display current settings"
 echo "1) panel temperature"
 echo "2) panel color"
+echo "3) set screen_off_maxfreq"
 echo
 echo -n "please enter a number (or press enter to exit): "
 
@@ -13,12 +16,16 @@ read option
 
 case $option in
 0)
+	echo
 	echo "current settings"
 	echo "----------------"
 	echo -n "1) panel temperature: "
 	cat /sys/class/lcd/panel/temperature
 	echo -n "2) panel color: "
 	cat /sys/class/lcd/panel/panel_colors
+	echo -n "3) screen off maxfreq: "
+	cat /sys/devices/system/cpu/cpufreq/`ls /sys/devices/system/cpu/cpufreq/`/screen_off_maxfreq
+	echo
 	;;
 1) 
 	echo -n "Enter a number between -60 and 0 (0 is kernel default): "
@@ -34,4 +41,23 @@ case $option in
 	echo $value > /sys/class/lcd/panel/panel_colors
 	echo "Turn off screen and back on (also will persist at boot)"
 	;;
+3)	
+	echo -n "Enter a number between 0 and 4 (0:650mhz,1:883mhz,2:1.2ghz/default,3:1.5ghz,4:disable): "
+	read value
+	case $value in
+	  0) FREQ=652800;;
+	  1) FREQ=883200;;
+	  2) FREQ=1267200;;
+	  3) FREQ=1574400;;
+	  4) FREQ=2265600;;
+	esac
+	echo $FREQ > /data/data/leankernel/screen_off_maxfreq
+	echo $FREQ > /sys/devices/system/cpu/cpufreq/`ls /sys/devices/system/cpu/cpufreq/`/screen_off_maxfreq
+	echo "Done! (also will persist at boot)"
+	;;
+*)
+	exit
+	;;
 esac
+echo
+done

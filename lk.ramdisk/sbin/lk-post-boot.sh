@@ -14,6 +14,15 @@ PANELSF="/sys/class/lcd/panel/temperature"
 PANELCLR="/data/data/leankernel/panelcolor"
 PANELSF="/sys/class/lcd/panel/panel_colors"
 [ -f $PANELCLR ] && echo `cat $PANELCLR` > $PANELSF
+#
+# screen_off_maxfreq
+#
+CFILE="/data/data/leankernel/screen_off_maxfreq"
+SFILE="/sys/devices/system/cpu/cpufreq"
+if [ -f $CFILE ]; then
+  echo `cat $CFILE` > $SFILE/ondemand/screen_off_maxfreq 
+  echo `cat $CFILE` > $SFILE/interactive/screen_off_maxfreq
+fi
 
 # daemonsu support - probably not needed
 [ -f "/system/xbin/daemonsu" ] && /system/xbin/daemonsu --auto-daemon &
