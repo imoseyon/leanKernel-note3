@@ -67,6 +67,7 @@ extern int poweroff_charging, recovery_mode;
 #define MAX_FBI_LIST 32
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
+static unsigned int btweak = 0;
 
 static u32 mdss_fb_pseudo_palette[16] = {
 	0x00000000, 0xffffffff, 0xffffffff, 0xffffffff,
@@ -317,10 +318,22 @@ static ssize_t mdss_fb_get_split(struct device *dev,
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO, mdss_fb_get_split, NULL);
 
+static ssize_t btweak_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", btweak);
+}
+static ssize_t btweak_store(struct device *dev, struct device_attribute *attr, 
+		const char *buf, size_t count)
+{
+	sscanf(buf, "%du", &btweak);
+	return count;
+}
+static DEVICE_ATTR(btweak, S_IRUGO | S_IWUSR | S_IWGRP, btweak_show, btweak_store);
 
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
 	&dev_attr_msm_fb_split.attr,
+	&dev_attr_btweak.attr,
 	NULL,
 };
 
@@ -695,9 +708,11 @@ static void mdss_fb_scale_bl(struct msm_fb_data_type *mfd, u32 *bl_lvl)
 		temp = (temp * mfd->bl_scale) / 1024;
 
 		/*if less than minimum level, use min level*/
-		if (temp < mfd->bl_min_lvl)
+		if (!btweak && temp < mfd->bl_min_lvl)
 			temp = mfd->bl_min_lvl;
-	}
+	} else if (btweak && (temp < mfd->bl_min_lvl) && (0 != temp))
+		temp = mfd->bl_min_lvl;
+
 	pr_debug("output = %d", temp);
 
 	(*bl_lvl) = temp;
@@ -711,7 +726,13 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 
 	if ((!mfd->panel_power_on || !mfd->bl_updated) &&
 	    !IS_CALIB_MODE_BL(mfd)) {
-		mfd->unset_bl_level = bkl_lvl;
+		if (!btweak) mfd->unset_bl_level = bkl_lvl;
+		else {
+			if (bkl_lvl < mfd->bl_min_lvl)
+				mfd->unset_bl_level = mfd->bl_min_lvl;
+			else
+				mfd->unset_bl_level = bkl_lvl;
+		}
 		return;
 	} else {
 		mfd->unset_bl_level = 0;
