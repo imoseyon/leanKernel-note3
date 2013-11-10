@@ -595,7 +595,7 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		break;
 	}
 
-#if defined(CONFIG_MACH_HLTEEUR)
+#if defined(CONFIG_MACH_HLTEEUR) || defined(CONFIG_MACH_HLTEKTT)
 	case CFG_SLAVE_READ_I2C: {
 		struct msm_camera_i2c_read_config read_config;
 		uint16_t local_data = 0;

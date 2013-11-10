@@ -385,7 +385,7 @@ struct msm_eeprom_cfg_data {
 
 enum msm_sensor_cfg_type_t {
 	CFG_SET_SLAVE_INFO,
-#if defined(CONFIG_MACH_HLTEEUR)
+#if defined(CONFIG_MACH_HLTEEUR) || defined(CONFIG_MACH_HLTEKTT)
 	CFG_SLAVE_READ_I2C,
 #endif
 	CFG_WRITE_I2C_ARRAY,
