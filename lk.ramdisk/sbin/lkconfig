@@ -9,6 +9,7 @@ echo "0) display current settings"
 echo "1) panel temperature"
 echo "2) panel color"
 echo "3) set screen_off_maxfreq"
+echo "4) panel brightness tweak"
 echo
 echo -n "please enter a number (or press enter to exit): "
 
@@ -25,6 +26,8 @@ case $option in
 	cat /sys/class/lcd/panel/panel_colors
 	echo -n "3) screen off maxfreq: "
 	cat /sys/devices/system/cpu/cpufreq/`ls /sys/devices/system/cpu/cpufreq/`/screen_off_maxfreq
+	echo -n "4) panel brightness tweak (0 off, 1 on): "
+	cat /sys/devices/virtual/graphics/fb0/btweak
 	echo
 	;;
 1) 
@@ -55,6 +58,13 @@ case $option in
 	echo $FREQ > /sys/devices/system/cpu/cpufreq/`ls /sys/devices/system/cpu/cpufreq/`/screen_off_maxfreq
 	echo "Done! (also will persist at boot)"
 	;;
+4)
+        echo -n "Enter 0 to turn it off and 1 to turn it on (0 kernel default): "
+        read value
+        echo $value > /data/data/leankernel/btweak
+        echo $value > /sys/devices/virtual/graphics/fb0/btweak
+        echo "Turn off screen and back on (also will persist at boot)"
+        ;;
 *)
 	exit
 	;;

@@ -23,9 +23,17 @@ if [ -f $CFILE ]; then
   echo `cat $CFILE` > $SFILE/ondemand/screen_off_maxfreq 
   echo `cat $CFILE` > $SFILE/interactive/screen_off_maxfreq
 fi
+#
+# brightness tweak
+#
+CFILE="/data/data/leankernel/btweak"
+SFILE="/sys/devices/virtual/graphics/fb0/btweak"
+[ -f $CFILE ] && echo `cat $CFILE` > $SFILE
 
 # daemonsu support - probably not needed
-[ -f "/system/xbin/daemonsu" ] && /system/xbin/daemonsu --auto-daemon &
+if [ -f "/system/xbin/daemonsu" ]; then
+   [ ! "`ps | grep daemonsu`" ] && /system/xbin/daemonsu --auto-daemon &
+fi
 
 pm disable com.sec.knox.seandroid
 
