@@ -354,7 +354,7 @@ static int eeprom_config_read_compressed_data(struct msm_eeprom_ctrl_t *e_ctrl,
 	struct msm_eeprom_cfg_data *cdata)
 {
 	int rc = 0;
-#if 0 //  just once to power up when load lib
+#if defined(CONFIG_MACH_HLTETMO)
 	bool down;
 #endif
 
@@ -374,7 +374,7 @@ static int eeprom_config_read_compressed_data(struct msm_eeprom_ctrl_t *e_ctrl,
     goto FREE;
 	}
 
-#if 0 //  just once to power up when load lib
+#if defined(CONFIG_MACH_HLTETMO)
 	rc = msm_eeprom_power_up(e_ctrl, &down);
 	if (rc < 0) {
     pr_err("%s: failed to power on eeprom\n", __func__);
@@ -418,7 +418,7 @@ static int eeprom_config_read_compressed_data(struct msm_eeprom_ctrl_t *e_ctrl,
 	pr_info("%s: done", __func__);
 
 POWER_DOWN:
-#if 0 //  just once to power up when load lib
+#if defined(CONFIG_MACH_HLTETMO)
 	msm_eeprom_power_down(e_ctrl, down);
 #endif
 
