@@ -1820,9 +1820,6 @@ static int mipi_samsung_disp_send_cmd(
 				flag = CMD_REQ_SINGLE_TX;
 			else
 				flag = 0;
-			
-			if(msd.dstat.bright_level)
-				msd.dstat.recent_bright_level = msd.dstat.bright_level;
 #if defined(HBM_RE)
 			if(msd.dstat.auto_brightness == 6) {
 				cmd_size = make_brightcontrol_hbm_set(msd.dstat.bright_level);
@@ -2160,8 +2157,14 @@ struct mdss_panel_data *mdss_dsi_switching = NULL;
 int IsSwitching = 0;
 extern int dsi_clk_on;
 #endif
-#if defined(CONFIG_MDNIE_LITE_TUNING)
-static bool dsi_first_init = true;
+
+#if defined(CONFIG_MACH_HLTEKDI)|| defined(CONFIG_MACH_H3GDUOS_CU)
+static bool isBootingTime = true;
+static void panel_work_func (struct work_struct *unused)
+{
+	is_negative_on();
+	return;
+}
 #endif
 
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
@@ -2242,17 +2245,21 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 #endif
 
 #if defined(CONFIG_MDNIE_LITE_TUNING)
-	if (!dsi_first_init) 
-		is_negative_on();
-	else 
-		dsi_first_init = false;
+#if defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_H3GDUOS_CU)
+	if (isBootingTime) {
+		INIT_DELAYED_WORK(&ctrl->work, panel_work_func);
+#if  !defined(CONFIG_MACH_H3GDUOS_CU)
+		schedule_delayed_work(&ctrl->work, 80);
+#else
+		schedule_delayed_work(&ctrl->work, 100);
+#endif
+		isBootingTime = false;
+	} else is_negative_on();
+#else
+	is_negative_on();
+#endif
 #endif
 
-	if(msd.dstat.recent_bright_level)
-	{
-		msd.dstat.bright_level = msd.dstat.recent_bright_level;
-		mipi_samsung_disp_send_cmd(PANEL_BRIGHT_CTRL, true);
-	}
 #if defined(PARTIAL_UPDATE)
 	if (partial_disp_range[0] || partial_disp_range[1])
 		mipi_samsung_disp_send_cmd(PANEL_PARTIAL_ON, true);
@@ -3241,6 +3248,21 @@ static void load_tuning_file(char *filename)
 	kfree(dp);
 }
 
+static int samsung_dsi_panel_event_handler(int event)
+{
+	pr_debug("SS DSI Event Handler");
+	switch (event) {
+		case MDSS_EVENT_FRAME_UPDATE:
+			if(msd.dstat.wait_disp_on) {
+				mipi_samsung_disp_send_cmd(PANEL_DISPLAY_ON, true);
+				msd.dstat.wait_disp_on = 0;
+			}
+		break;
+	}
+
+	return 0;
+}
+
 static ssize_t tuning_show(struct device *dev,
 			   struct device_attribute *attr, char *buf)
 {
@@ -3276,33 +3298,6 @@ static ssize_t tuning_store(struct device *dev,
 	return size;
 }
 
-
-
-static DEVICE_ATTR(tuning, 0664, tuning_show, tuning_store);
-#endif
-static int samsung_dsi_panel_event_handler(int event)
-{
-	pr_debug("SS DSI Event Handler");
-	switch (event) {
-		case MDSS_EVENT_FRAME_UPDATE:
-			if(msd.dstat.wait_disp_on) {
-				mipi_samsung_disp_send_cmd(PANEL_DISPLAY_ON, true);
-				msd.dstat.wait_disp_on = 0;
-			}
-			break;
-#if defined(CONFIG_MDNIE_LITE_TUNING)
-		case MDSS_EVENT_MDNIE_DEFAULT_UPDATE:
-			is_negative_on();
-			break;
-#endif
-		default:
-			pr_err("%s : unknown event \n", __func__);
-			break;
-
-	}
-
-	return 0;
-}
 static int mdss_dsi_panel_blank(struct mdss_panel_data *pdata, int blank)
 {
 	if(blank) {
@@ -3315,6 +3310,9 @@ static int mdss_dsi_panel_blank(struct mdss_panel_data *pdata, int blank)
 	}
 	return 0;
 }
+
+static DEVICE_ATTR(tuning, 0664, tuning_show, tuning_store);
+#endif
 
 #if defined(CONFIG_LCD_CLASS_DEVICE)
 static struct attribute *panel_sysfs_attributes[] = {
