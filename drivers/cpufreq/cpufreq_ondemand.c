@@ -186,8 +186,6 @@ static unsigned int dbs_enable;	/* number of CPUs using this policy */
  */
 static DEFINE_MUTEX(dbs_mutex);
 
-static struct workqueue_struct *dbs_wq;
-
 struct dbs_work_struct {
 	struct work_struct work;
 	unsigned int cpu;
@@ -520,7 +518,7 @@ static void update_sampling_rate(unsigned int new_rate)
 			cancel_delayed_work_sync(&dbs_info->work);
 			mutex_lock(&dbs_info->timer_mutex);
 
-			queue_delayed_work_on(dbs_info->cpu, dbs_wq,
+			schedule_delayed_work_on(dbs_info->cpu,
 				&dbs_info->work, usecs_to_jiffies(new_rate));
 
 		}
@@ -1602,7 +1600,7 @@ static void do_dbs_timer(struct work_struct *work)
 			dbs_info->freq_lo, CPUFREQ_RELATION_H);
 		delay = dbs_info->freq_lo_jiffies;
 	}
-	queue_delayed_work_on(cpu, dbs_wq, &dbs_info->work, delay);
+	schedule_delayed_work_on(cpu, &dbs_info->work, delay);
 	mutex_unlock(&dbs_info->timer_mutex);
 }
 
@@ -1616,7 +1614,7 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 
 	dbs_info->sample_type = DBS_NORMAL_SAMPLE;
 	INIT_DELAYED_WORK_DEFERRABLE(&dbs_info->work, do_dbs_timer);
-	queue_delayed_work_on(dbs_info->cpu, dbs_wq, &dbs_info->work, delay);
+	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
 }
 
 static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
@@ -1780,8 +1778,7 @@ static int dbs_sync_thread(void *data)
 
 			/* reschedule the next ondemand sample */
 			mutex_lock(&this_dbs_info->timer_mutex);
-			queue_delayed_work_on(cpu, dbs_wq,
-					      &this_dbs_info->work, delay);
+			schedule_delayed_work_on(cpu, &this_dbs_info->work, delay);
 			mutex_unlock(&this_dbs_info->timer_mutex);
 		}
 
@@ -1808,7 +1805,7 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 	}
 
 	for_each_online_cpu(i)
-		queue_work_on(i, dbs_wq, &per_cpu(dbs_refresh_work, i).work);
+		schedule_work_on(i, &per_cpu(dbs_refresh_work, i).work);
 }
 
 static int dbs_input_connect(struct input_handler *handler,
@@ -2029,11 +2026,6 @@ static int __init cpufreq_gov_dbs_init(void)
 			MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
 	}
 
-	dbs_wq = alloc_workqueue("ondemand_dbs_wq", WQ_HIGHPRI, 0);
-	if (!dbs_wq) {
-		printk(KERN_ERR "Failed to create ondemand_dbs_wq workqueue\n");
-		return -EFAULT;
-	}
 	for_each_possible_cpu(i) {
 		struct cpu_dbs_info_s *this_dbs_info =
 			&per_cpu(od_cpu_dbs_info, i);
@@ -2066,7 +2058,6 @@ static void __exit cpufreq_gov_dbs_exit(void)
 		mutex_destroy(&this_dbs_info->timer_mutex);
 		kthread_stop(this_dbs_info->sync_thread);
 	}
-	destroy_workqueue(dbs_wq);
 }
 
 /* PATCH : SMART_UP */
