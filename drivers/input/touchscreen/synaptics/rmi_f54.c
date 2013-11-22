@@ -1238,7 +1238,6 @@ struct synaptics_rmi4_f54_handle {
 	struct hrtimer watchdog;
 	struct work_struct timeout_work;
 	struct delayed_work status_work;
-	struct workqueue_struct *status_workqueue;
 	struct synaptics_rmi4_exp_fn_ptr *fn_ptr;
 	struct synaptics_rmi4_data *rmi4_data;
 };
@@ -1972,9 +1971,7 @@ static void timeout_set_status(struct work_struct *work)
 					__func__);
 			f54->status = STATUS_ERROR;
 		} else {
-			queue_delayed_work(f54->status_workqueue,
-					&f54->status_work,
-					0);
+			schedule_delayed_work(&f54->status_work, 0);
 			mutex_unlock(&f54->status_mutex);
 			return;
 		}
@@ -5534,8 +5531,7 @@ static void synaptics_rmi4_f54_attn(struct synaptics_rmi4_data *rmi4_data,
 		return;
 
 	if (f54->intr_mask & intr_mask) {
-		queue_delayed_work(f54->status_workqueue,
-				&f54->status_work,
+		schedule_delayed_work(&f54->status_work,
 				msecs_to_jiffies(STATUS_WORK_INTERVAL));
 	}
 
@@ -5791,8 +5787,6 @@ pdt_done:
 	f54->factory_data = factory_data;
 #endif
 
-	f54->status_workqueue =
-		create_singlethread_workqueue("f54_status_workqueue");
 	INIT_DELAYED_WORK(&f54->status_work,
 			synaptics_rmi4_f54_status_work);
 
@@ -5867,8 +5861,6 @@ static void synaptics_rmi4_f54_remove(struct synaptics_rmi4_data *rmi4_data)
 #endif
 
 	cancel_delayed_work_sync(&f54->status_work);
-	flush_workqueue(f54->status_workqueue);
-	destroy_workqueue(f54->status_workqueue);
 
 #ifdef FACTORY_MODE
 	sysfs_remove_group(&f54->factory_data->fac_dev_ts->kobj, &cmd_attr_group);
