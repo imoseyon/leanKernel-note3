@@ -93,6 +93,7 @@ int writeback_inodes_sb_nr_if_idle(struct super_block *, unsigned long nr,
 void sync_inodes_sb(struct super_block *);
 long writeback_inodes_wb(struct bdi_writeback *wb, long nr_pages,
 				enum wb_reason reason);
+long wb_do_writeback(struct bdi_writeback *wb, int force_wait);
 void wakeup_flusher_threads(long nr_pages, enum wb_reason reason);
 
 /* writeback.h requires fs.h; it, too, is not included from here. */
