@@ -62,6 +62,11 @@
 #define SIG_MDNIE_BROWSER_TONE3	42
 #endif
 
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+#define HIJACK_DISABLED 0
+#define HIJACK_ENABLED 1
+#endif
+
 enum Lcd_mDNIe_UI {
 	mDNIe_UI_MODE,
 	mDNIe_VIDEO_MODE,
