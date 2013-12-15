@@ -29,7 +29,7 @@
 #include <linux/slab.h>
 
 extern bool cpufreq_screen_on;
-#define DEFAULT_SCREEN_OFF_MAX 1267200
+#define DEFAULT_SCREEN_OFF_MAX 2265600
 static unsigned long screen_off_max = DEFAULT_SCREEN_OFF_MAX;
 
 /*
