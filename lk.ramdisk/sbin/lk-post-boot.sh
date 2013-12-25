@@ -29,6 +29,12 @@ fi
 CFILE="/data/data/leankernel/btweak"
 SFILE="/sys/devices/virtual/graphics/fb0/btweak"
 [ -f $CFILE ] && echo `cat $CFILE` > $SFILE
+#
+# gpu governor
+#
+CFILE="/data/data/leankernel/gpu_governor"
+SFILE="/sys/devices/fdb00000.qcom,kgsl-3d0/devfreq/fdb00000.qcom,kgsl-3d0/governor"
+[ -f $CFILE ] && echo `cat $CFILE` > $SFILE
 
 # daemonsu support - probably not needed
 if [ -f "/system/xbin/daemonsu" ]; then

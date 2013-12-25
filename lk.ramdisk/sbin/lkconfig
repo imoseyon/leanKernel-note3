@@ -10,6 +10,7 @@ echo "1) panel temperature"
 echo "2) panel color"
 echo "3) set screen_off_maxfreq"
 echo "4) panel brightness tweak"
+echo "5) gpu governor"
 echo
 echo -n "please enter a number (or press enter to exit): "
 
@@ -28,6 +29,8 @@ case $option in
 	cat /sys/devices/system/cpu/cpufreq/`ls /sys/devices/system/cpu/cpufreq/`/screen_off_maxfreq
 	echo -n "4) panel brightness tweak (0 off, 1 on): "
 	cat /sys/devices/virtual/graphics/fb0/btweak
+	echo -n "5) gpu governor: "
+	cat /sys/devices/fdb00000.qcom,kgsl-3d0/devfreq/fdb00000.qcom,kgsl-3d0/governor
 	echo
 	;;
 1) 
@@ -65,6 +68,19 @@ case $option in
         echo $value > /sys/devices/virtual/graphics/fb0/btweak
         echo "Turn off screen and back on (also will persist at boot)"
         ;;
+5)
+        echo -n "Enter a number between 0 and 3 (0:adreno-tz/default,1:powersave,2:performance,3:ondemand): "
+        read value
+        case $value in
+          0) GOV=msm-adreno-tz;;
+          1) GOV=powersave;;
+          2) GOV=performance;;
+          3) GOV=simple_ondemand;;
+        esac
+	echo $GOV > /data/data/leankernel/gpu_governor
+	echo $GOV > /sys/devices/fdb00000.qcom,kgsl-3d0/devfreq/fdb00000.qcom,kgsl-3d0/governor
+	echo "Done! (also will persist at boot)"
+	;;
 *)
 	exit
 	;;
