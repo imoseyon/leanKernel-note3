@@ -1133,7 +1133,7 @@ void vc_set_vdd(const char *buf)
             pr_info("[imoseyon]: voltage for %lu changed to %d\n",
                 drv.acpu_freq_tbl[i].speed.khz, volt*1000);
             drv.acpu_freq_tbl[i].vdd_core = min(max((unsigned int)volt*1000,
-                (unsigned int)700000), (unsigned int)1350000);
+                (unsigned int)600000), (unsigned int)1350000);
             ret = sscanf(buf, "%s", size_cur);
             buf += (strlen(size_cur)+1);
           }
