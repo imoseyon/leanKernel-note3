@@ -6794,6 +6794,13 @@ wl_cfg80211_stop_ap(
 		wl_clr_drv_status(wl, AP_CREATED, dev);
 		/* Turn on the MPC */
 		wldev_iovar_setint(dev, "mpc", 1);
+		if (wl->ap_info) {
+			kfree(wl->ap_info->wpa_ie);
+			kfree(wl->ap_info->rsn_ie);
+			kfree(wl->ap_info->wps_ie);
+			kfree(wl->ap_info);
+			wl->ap_info = NULL;
+		}
 	} else {
 		WL_DBG(("Stopping P2P GO \n"));
 	}
