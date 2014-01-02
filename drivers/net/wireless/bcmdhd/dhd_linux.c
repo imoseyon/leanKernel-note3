@@ -4051,7 +4051,6 @@ int _dhd_tdls_enable(dhd_pub_t *dhd, bool tdls_on, bool auto_on, struct ether_ad
 	uint32 tdls_idle_time = CUSTOM_TDLS_IDLE_MODE_SETTING;
 	int32 tdls_rssi_high = CUSTOM_TDLS_RSSI_THRESHOLD_HIGH;
 	int32 tdls_rssi_low = CUSTOM_TDLS_RSSI_THRESHOLD_LOW;
-#endif /* WLTDLS_AUTO_ENABLE */
 	if (!FW_SUPPORTED(dhd, tdls))
 		return BCME_ERROR;
 
@@ -4106,7 +4105,6 @@ auto_mode:
 		goto exit;
 	}
 #endif /* CUSTOMER_HW4 */
-#endif /* WLTDLS_AUTO_ENABLE */
 exit:
 	return ret;
 }
