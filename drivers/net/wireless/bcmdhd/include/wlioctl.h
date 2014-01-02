@@ -4,7 +4,7 @@
  *
  * Definitions subject to change without notice.
  *
- * Copyright (C) 1999-2012, Broadcom Corporation
+ * Copyright (C) 1999-2013, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wlioctl.h 384900 2013-02-13 14:23:02Z $
+ * $Id: wlioctl.h 417015 2013-08-07 12:56:49Z $
  */
 
 #ifndef _wlioctl_h_
@@ -42,10 +42,6 @@
 #include <bcm_mpool_pub.h>
 #include <bcmcdc.h>
 #endif /* LINUX_POSTMOGRIFY_REMOVAL */
-
-#ifdef CUSTOMER_HW4
-#include <dhd_sec_feature.h>
-#endif /* CUSTOMER_HW4 */
 
 /*  LINUX_POSTMOGRIFY_REMOVAL: undefined during compile phase, so its
  *  a no-op for most cases. For hybrid and other open source releases,
@@ -66,6 +62,12 @@ typedef struct remote_ioctl {
 	char            intf_name[INTF_NAME_SIZ];
 } rem_ioctl_t;
 #define REMOTE_SIZE	sizeof(rem_ioctl_t)
+
+
+typedef struct {
+	uint32 num;
+	chanspec_t list[1];
+} chanspec_list_t;
 
 #define ACTION_FRAME_SIZE 1800
 
@@ -363,6 +365,7 @@ typedef struct wl_extdscan_params {
 #define WL_SCANFLAGS_RESERVED	0x02	/* Reserved */
 #define WL_SCANFLAGS_PROHIBITED	0x04	/* allow scanning prohibited channels */
 #define WL_SCANFLAGS_OFFCHAN	0x08	/* allow scanning/reporting off-channel APs */
+#define WL_SCANFLAGS_HOTSPOT	0x10	/* automatic ANQP to hotspot APs */
 
 #define WL_SCAN_PARAMS_SSID_MAX 	10
 
@@ -1030,7 +1033,6 @@ typedef struct {
 #define WPA_AUTH_PFN_ANY	0xffffffff	/* for PFN, match only ssid */
 
 /* pmkid */
-/* Due to pmkid_info driver IOVar/dhd implementation, leave this as 16 for now. */
 #define	MAXPMKID		16
 
 typedef struct _pmkid {
@@ -1743,7 +1745,8 @@ typedef struct wlc_iov_trx_s {
 /* #define WLC_SET_WAI_REKEY			315 */	/* for WAPI, deprecated use iovar instead */
 #define WLC_SET_NAT_CONFIG			316	/* for configuring NAT filter driver */
 #define WLC_GET_NAT_STATE			317
-#define WLC_LAST				318
+#define WLC_GET_RSSI_QDB			318 /* qdB portion of the RSSI */
+#define WLC_LAST				319
 
 #ifndef EPICTRL_COOKIE
 #define EPICTRL_COOKIE		0xABADCEDE
@@ -1814,7 +1817,8 @@ typedef struct {
 /* WLC_GET_AUTH, WLC_SET_AUTH values */
 #define WL_AUTH_OPEN_SYSTEM		0	/* d11 open authentication */
 #define WL_AUTH_SHARED_KEY		1	/* d11 shared authentication */
-#define WL_AUTH_OPEN_SHARED		2	/* try open, then shared if open failed w/rc 13 */
+#define WL_AUTH_OPEN_SHARED		2	 /* try open, then shared if open failed w/rc 13 */
+
 #endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
 /* Bit masks for radio disabled status - returned by WL_GET_RADIO */
@@ -1826,6 +1830,17 @@ typedef struct {
 #define	WL_SPURAVOID_OFF	0
 #define	WL_SPURAVOID_ON1	1
 #define	WL_SPURAVOID_ON2	2
+
+
+#define WL_4335_SPURAVOID_ON1	1
+#define WL_4335_SPURAVOID_ON2	2
+#define WL_4335_SPURAVOID_ON3	3
+#define WL_4335_SPURAVOID_ON4	4
+#define WL_4335_SPURAVOID_ON5	5
+#define WL_4335_SPURAVOID_ON6	6
+#define WL_4335_SPURAVOID_ON7	7
+#define WL_4335_SPURAVOID_ON8	8
+#define WL_4335_SPURAVOID_ON9	9
 
 /* Override bit for WLC_SET_TXPWR.  if set, ignore other level limits */
 #define WL_TXPWR_OVERRIDE	(1U<<31)
@@ -2125,7 +2140,7 @@ typedef struct wl_sampledata {
 
 /* WL_OTA START */
 
-#define WL_OTA_ARG_PARSE_BLK_SIZE	1200
+#define WL_OTA_ARG_PARSE_BLK_SIZE 	1200
 #define WL_OTA_TEST_MAX_NUM_RATE	30
 #define WL_OTA_TEST_MAX_NUM_SEQ		100
 
@@ -2763,7 +2778,7 @@ typedef struct {
 	chanspec_t chanspec;			/* txpwr report for this channel */
 	chanspec_t local_chanspec;		/* channel on which we are associated */
 	uint32 buflen;				/* ppr buffer length */
-	uint8 pprbuf[1];			/* Latest target power buffer buffer */
+	uint8      pprbuf[1];			/* Latest target power buffer */
 } wl_txppr_t;
 
 #define WL_TXPPR_VERSION	0
@@ -2774,7 +2789,7 @@ typedef struct {
 #define WL_BW_20MHZ 		0
 #define WL_BW_40MHZ 		1
 #define WL_BW_80MHZ 		2
-#define WL_BW_160MHZ		3
+#define WL_BW_160MHZ 		3
 
 /* tx_power_t.flags bits */
 /* use for defined PPR_API */
@@ -2954,11 +2969,19 @@ typedef struct wl_txchain_pwr_offsets {
 #define WL_PSTA_VAL		0x00008000
 #define WL_TBTT_VAL		0x00010000
 #define WL_NIC_VAL		0x00020000
-#define WL_PWRSEL_VAL	0x00040000
-#define WL_TRF_MGMT_VAL	0x00080000
-#define WL_L2FILTER_VAL	0x00100000
+#define WL_PWRSEL_VAL		0x00040000
+#define WL_TRF_MGMT_VAL		0x00080000
+#define WL_L2FILTER_VAL		0x00100000
 #define WL_TSO_VAL		0x00200000
 #define WL_MQ_VAL		0x00400000
+/* These 3 levels are currently not used in trunk but in Aardvark and Phoenix2 with != values */
+#define WL_LPC_VAL	        0x00800000
+#define WL_TXBF_VAL		0x01000000
+#define WL_P2PO_VAL		0x02000000
+/* This level is synchronized with other branches */
+#define WL_WNM_VAL		0x04000000
+/* This level is currently not used in trunk but used in Phoenix2 */
+#define WL_SRSCAN_VAL	0x08000000
 
 /* use top-bit for WL_TIME_STAMP_VAL because this is a modifier
  * rather than a message-type of its own
@@ -3011,8 +3034,8 @@ typedef struct wl_txchain_pwr_offsets {
 #define WL_WDS_WPA_ROLE_SUP	1	/* supplicant */
 #define WL_WDS_WPA_ROLE_AUTO	255	/* auto, based on mac addr value */
 
-/* number of bytes needed to define a 128-bit mask for MAC event reporting */
-#define WL_EVENTING_MASK_LEN	16
+/* number of bytes needed to define a mask for MAC event reporting */
+#define WL_EVENTING_MASK_LEN	((WLC_E_LAST + 7) / 8)
 
 /*
  * Join preference iovar value is an array of tuples. Each tuple has a one-byte type,
@@ -3321,7 +3344,7 @@ typedef struct {
 	uint32	unchained;	/* number of frames not chained */
 	uint32	maxchainsz;	/* max chain size so far */
 	uint32	currchainsz;	/* current chain size */
-	uint32	cso_normal;	/* hw cso hdr for normal process */
+	uint32 	cso_normal;	/* hw cso hdr for normal process */
 } wl_cnt_t;
 
 #ifndef LINUX_POSTMOGRIFY_REMOVAL
@@ -3780,11 +3803,11 @@ typedef struct tdls_iovar {
 } tdls_iovar_t;
 
 /* modes */
-#define TDLS_WFD_IE_TX			0
-#define TDLS_WFD_IE_RX			1
+#define TDLS_WFD_IE_TX 			0
+#define TDLS_WFD_IE_RX 			1
 #define TDLS_WFD_PROBE_IE_TX	2
 #define TDLS_WFD_PROBE_IE_RX	3
-#define TDLS_WFD_IE_SIZE		512
+#define TDLS_WFD_IE_SIZE 		512
 /* structure for tdls wfd ie */
 typedef struct tdls_wfd_ie_iovar {
 	struct ether_addr ea;		/* Station address */
@@ -4033,6 +4056,57 @@ typedef struct wl_pfn {
 
 #endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
+/* Service discovery */
+typedef struct {
+	uint8	transaction_id;	/* Transaction id */
+	uint8	protocol;	/* Service protocol type */
+	uint16	query_len;	/* Length of query */
+	uint16	response_len;	/* Length of response */
+	uint8	qrbuf[1];
+} wl_p2po_qr_t;
+
+typedef struct {
+	uint16			period;			/* extended listen period */
+	uint16			interval;		/* extended listen interval */
+} wl_p2po_listen_t;
+
+/* ANQP offload */
+
+#define ANQPO_MAX_QUERY_SIZE		256
+typedef struct {
+	uint16 max_retransmit;		/* -1 use default, max retransmit on no ACK from peer */
+	uint16 response_timeout;	/* -1 use default, msec to wait for resp after tx packet */
+	uint16 max_comeback_delay;	/* -1 use default, max comeback delay in resp else fail */
+	uint16 max_retries;			/* -1 use default, max retries on failure */
+	uint16 query_len;			/* length of ANQP query */
+	uint8 query_data[1];		/* ANQP encoded query (max ANQPO_MAX_QUERY_SIZE) */
+} wl_anqpo_set_t;
+
+typedef struct {
+	uint16 channel;				/* channel of the peer */
+	struct ether_addr addr;		/* addr of the peer */
+} wl_anqpo_peer_t;
+
+#define ANQPO_MAX_PEER_LIST			64
+typedef struct {
+	uint16 count;				/* number of peers in list */
+	wl_anqpo_peer_t peer[1];	/* max ANQPO_MAX_PEER_LIST */
+} wl_anqpo_peer_list_t;
+
+#define ANQPO_MAX_IGNORE_SSID		64
+typedef struct {
+	bool is_clear;				/* set to clear list (not used on GET) */
+	uint16 count;				/* number of SSID in list */
+	wlc_ssid_t ssid[1];			/* max ANQPO_MAX_IGNORE_SSID */
+} wl_anqpo_ignore_ssid_list_t;
+
+#define ANQPO_MAX_IGNORE_BSSID		64
+typedef struct {
+	bool is_clear;				/* set to clear list (not used on GET) */
+	uint16 count;				/* number of addr in list */
+	struct ether_addr bssid[1];	/* max ANQPO_MAX_IGNORE_BSSID */
+} wl_anqpo_ignore_bssid_list_t;
+
 /* TCP Checksum Offload defines */
 #define TOE_TX_CSUM_OL		0x00000001
 #define TOE_RX_CSUM_OL		0x00000002
@@ -4193,6 +4267,15 @@ typedef struct wl_pkt_filter_stats {
 	uint32	num_pkts_discarded;	/* # packets discarded by dongle for all filters */
 } wl_pkt_filter_stats_t;
 
+#define RSN_KCK_LENGTH 16
+#define RSN_KEK_LENGTH 16
+#define RSN_REPLAY_LEN 8
+typedef struct _gtkrefresh {
+	uchar	KCK[RSN_KCK_LENGTH];
+	uchar	KEK[RSN_KEK_LENGTH];
+	uchar	ReplayCounter[RSN_REPLAY_LEN];
+} gtk_keyinfo_t, *pgtk_keyinfo_t;
+
 /* Sequential Commands ioctl */
 typedef struct wl_seq_cmd_ioctl {
 	uint32 cmd;		/* common ioctl definition */
@@ -4246,6 +4329,7 @@ typedef struct wl_pkteng_stats {
 	int32 rssi;			/* RSSI */
 	int32 snr;			/* signal to noise ratio */
 	uint16 rxpktcnt[NUM_80211_RATES+1];
+	uint8 rssi_qdb; /* qdB portion of the computed rssi */
 } wl_pkteng_stats_t;
 
 
@@ -5460,6 +5544,80 @@ typedef struct txdelay_params {
 	uint8	tune;	/* Debug */
 } txdelay_params_t;
 
+#define WL_RELMCAST_MAX_CLIENT 			32
+#define WL_RELMCAST_FLAG_INBLACKLIST	1
+#define WL_RELMCAST_FLAG_ACTIVEACKER	2
+#define WL_RELMCAST_FLAG_RELMCAST		4
+#define WL_RELMCAST_MAX_TABLE_ENTRY     4
+
+#define WL_RELMCAST_VER					1
+#define WL_RELMCAST_INDEX_ACK_ALL       255
+#define WL_RELMCAST_NUM_OF_MC_STREAMS   4
+#define WL_RELMCAST_MAX_TRS_PER_GROUP   1
+#define WL_RELMCAST_ACK_MCAST0          0x02
+#define WL_RELMCAST_ACK_MCAST_ALL             0x01
+#define WL_RELMCAST_ACTF_TIME_MIN          300	 /* time in ms */
+#define WL_RELMCAST_ACTF_TIME_MAX          20000 /* time in ms */
+
+enum {
+	RELMCAST_ENTRY_OP_DISABLE = 0,
+	RELMCAST_ENTRY_OP_DELETE,
+	RELMCAST_ENTRY_OP_ENABLE,
+	RELMCAST_ENTRY_OP_ACK_ALL
+};
+
+enum {
+	WL_RELMCAST_MODE_RECEIVER = 0,
+	WL_RELMCAST_MODE_TRANSMITTER,
+	WL_RELMCAST_MODE_INITIATOR
+};
+
+typedef struct wl_relmcast_client {
+	uint8 flag;
+	int16 rssi;
+	struct ether_addr addr;
+} wl_relmcast_client_t;
+
+typedef struct wl_relmcast_st {
+	uint8 ver;
+	uint8 num;
+	wl_relmcast_client_t clients[WL_RELMCAST_MAX_CLIENT];
+	uint16 err;
+} wl_relmcast_status_t;
+
+typedef struct wl_relmcast_entry {
+	int8 flag;
+	struct ether_addr addr;
+} wl_relmcast_entry_t;
+
+typedef struct wl_relmcast_entry_table {
+	int8 index;
+	int8 opcode;
+	wl_relmcast_entry_t entry[WL_RELMCAST_MAX_TABLE_ENTRY];
+} wl_relmcast_entry_table_t;
+
+typedef struct wl_tr_Info {
+	struct ether_addr addr;
+	uint32 timeVal;
+	uint16 seq;
+} wl_tr_Info_t;
+
+typedef struct wl_mcGrpEntry {
+	struct ether_addr mcaddr;
+	struct ether_addr ar;
+	wl_tr_Info_t trInfo[WL_RELMCAST_MAX_TRS_PER_GROUP];
+} wl_mcGrpEntry_t;
+
+typedef struct wl_mcAckAllEntry {
+	struct ether_addr ar;
+	wl_tr_Info_t trInfo[WL_RELMCAST_NUM_OF_MC_STREAMS];
+} wl_mcAckAllEntry_t;
+
+typedef struct wl_relmcast_globalMcTbl {
+	uint8 activeMask;
+	wl_mcAckAllEntry_t ackAll;
+	wl_mcGrpEntry_t mcEntry[WL_RELMCAST_NUM_OF_MC_STREAMS];
+} wl_relmcast_globalMcTbl_t;
 #endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
 /* fbt_cap: FBT assoc / reassoc modes. */
@@ -5503,17 +5661,15 @@ typedef struct statreq {
 	uint16 reps;
 } statreq_t;
 
-#ifdef EVENT_LOG_COMPILE
-typedef struct wlc_event_log_set_s {
+typedef struct wl_el_set_params_s {
 	uint8 set;	/* Set number */
 	uint32 size;	/* Size to make/expand */
-} wlc_event_log_set_t;
+} wl_el_set_params_t;
 
-typedef struct wlc_event_log_tag_s {
+typedef struct wl_el_tag_params_s {
 	uint16 tag;
 	uint8 set;
 	uint8 flags;
-} wlc_event_log_tag_t;
-#endif /* EVENT_LOG_COMPILE */
+} wl_el_tag_params_t;
 
 #endif /* _wlioctl_h_ */
