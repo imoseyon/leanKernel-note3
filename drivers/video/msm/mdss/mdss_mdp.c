@@ -790,7 +790,17 @@ static int mdss_mdp_irq_clk_setup(struct mdss_data_type *mdata)
 
 void mdss_mdp_dump_power_clk(void)
 {
+	u8 clk_idx = 0;
+	struct clk *clk;
+
 	pr_info(" ============ dump power & mdss clk start ============\n");
+
+	for(clk_idx = MDSS_CLK_AHB ; clk_idx < MDSS_MAX_CLK ;clk_idx++)
+	{
+		clk = mdss_mdp_get_clk(clk_idx);
+		clock_debug_print_clock2(clk);
+	}
+
 	pr_info("%s: mdp_clk_cnt =%d \n", __func__, mdp_clk_cnt);
 	pr_info(" ============ dump power & mdss clk end ============\n");
 }

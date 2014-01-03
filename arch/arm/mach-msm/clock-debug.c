@@ -675,6 +675,29 @@ static const struct file_operations clock_debug_fops = {
 	.release	= seq_release,
 };
 
+int clock_debug_print_clock2(struct clk *c)
+{
+       char *start = "";
+
+       if (!c)
+               return 0;
+       pr_info("\n");
+       do {
+               if (c->vdd_class)
+                       pr_info("%s%s:%u:%u [%ld, %lu]", start, c->dbg_name,
+                               c->prepare_count, c->count, c->rate,
+                               c->vdd_class->cur_level);
+               else
+               pr_info("%s%s:%u:%u [%ld]", start, c->dbg_name,
+               c->prepare_count, c->count, c->rate);
+               start = " -> ";
+       } while ((c = clk_get_parent(c)));
+
+       pr_cont("\n");
+
+return 1;
+}
+
 /*
  * Print the names of enabled clocks and their parents if debug_suspend is set
  */

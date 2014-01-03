@@ -1435,6 +1435,9 @@ void mdss_dsi_dump_power_clk(struct mdss_panel_data *pdata, int flag) {
 		pr_info("vdd_io_vreg : %d\n", regulator_is_enabled((ctrl_pdata->shared_pdata).vdd_io_vreg));
 	if ((ctrl_pdata->shared_pdata).vdda_vreg)
 		pr_info("vdda_vreg : %d\n", regulator_is_enabled((ctrl_pdata->shared_pdata).vdda_vreg));
+	clock_debug_print_clock2(ctrl_pdata->pixel_clk);
+	clock_debug_print_clock2(ctrl_pdata->byte_clk);
+	clock_debug_print_clock2(ctrl_pdata->esc_clk);
 	pr_info("%s: ctrl ndx=%d clk_cnt=%d\n",
 			__func__, ctrl_pdata->ndx, ctrl_pdata->clk_cnt);
 	pr_info(" ============ dump power & clk end ============\n");
