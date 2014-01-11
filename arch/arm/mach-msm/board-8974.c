@@ -32,9 +32,6 @@
 #include <mach/board.h>
 #include <mach/gpiomux.h>
 #include <mach/msm_iomap.h>
-#ifdef CONFIG_ION_MSM
-#include <mach/ion.h>
-#endif
 #include <mach/msm_memtypes.h>
 #include <mach/msm_smd.h>
 #include <mach/restart.h>
@@ -300,27 +297,6 @@ static struct i2c_board_info max77826_pmic_info[] __initdata = {
 };
 #endif /* CONFIG_REGULATOR_MAX77826 */
 
-static struct memtype_reserve msm8974_reserve_table[] __initdata = {
-	[MEMTYPE_SMI] = {
-	},
-	[MEMTYPE_EBI0] = {
-		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
-	},
-	[MEMTYPE_EBI1] = {
-		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
-	},
-};
-
-static int msm8974_paddr_to_memtype(phys_addr_t paddr)
-{
-	return MEMTYPE_EBI1;
-}
-
-static struct reserve_info msm8974_reserve_info __initdata = {
-	.memtype_reserve_table = msm8974_reserve_table,
-	.paddr_to_memtype = msm8974_paddr_to_memtype,
-};
-
 #define PERSISTENT_RAM_BASE 0xbff00000
 #define PERSISTENT_RAM_SIZE SZ_1M
 #define RAM_CONSOLE_SIZE (124*SZ_1K * 2)
@@ -362,9 +338,7 @@ void __init add_ramconsole_devices(void)
 
 void __init msm_8974_reserve(void)
 {
-	reserve_info = &msm8974_reserve_info;
-	of_scan_flat_dt(dt_scan_for_memory_reserve, msm8974_reserve_table);
-	msm_reserve();
+	of_scan_flat_dt(dt_scan_for_memory_reserve, NULL);
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 	add_persistent_ram();
 #endif
@@ -372,8 +346,7 @@ void __init msm_8974_reserve(void)
 
 static void __init msm8974_early_memory(void)
 {
-	reserve_info = &msm8974_reserve_info;
-	of_scan_flat_dt(dt_scan_for_memory_hole, msm8974_reserve_table);
+	of_scan_flat_dt(dt_scan_for_memory_hole, NULL);
 }
 
 #ifdef CONFIG_MFD_MAX77803
