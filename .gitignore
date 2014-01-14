@@ -24,6 +24,7 @@
 *.order
 modules.builtin
 *.elf
+*.bin
 *.gz
 *.bz2
 *.lzma
@@ -83,3 +84,5 @@ GTAGS
 *.orig
 *~
 \#*#
+zip
+buildlean.sh
