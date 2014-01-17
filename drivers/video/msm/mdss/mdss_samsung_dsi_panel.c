@@ -3321,11 +3321,7 @@ static struct attribute *panel_sysfs_attributes[] = {
 #if defined(PARTIAL_UPDATE)
 	&dev_attr_partial_disp.attr,
 #endif
-<<<<<<< HEAD
-=======
-	&dev_attr_cpufreq_screen_on.attr,
 	&dev_attr_panel_colors.attr,
->>>>>>> cebca71... mdss: implement panel color control
 	NULL
 };
 static const struct attribute_group panel_sysfs_group = {
