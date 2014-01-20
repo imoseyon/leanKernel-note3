@@ -10,7 +10,7 @@ echo "1) panel temperature"
 echo "2) panel color"
 echo "3) set screen_off_maxfreq (unavailble)"
 echo "4) panel brightness tweak"
-echo "5) gpu governor"
+echo "5) gpu governor (unavailable)"
 echo
 echo -n "please enter a number (or press enter to exit): "
 
@@ -68,7 +68,7 @@ case $option in
         echo $value > /sys/devices/virtual/graphics/fb0/btweak
         echo "Turn off screen and back on (also will persist at boot)"
         ;;
-5)
+55)
         echo -n "Enter a number between 0 and 3 (0:adreno-tz/default,1:powersave,2:performance,3:ondemand): "
         read value
         case $value in
