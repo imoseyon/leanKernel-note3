@@ -3017,7 +3017,6 @@ static void put_event(struct perf_event *event)
 	    event->attr.constraint_duplicate)
 		event->state = PERF_EVENT_STATE_ACTIVE;
 
-	file->private_data = NULL;
 	if (!atomic_long_dec_and_test(&event->refcount))
 		return;
 
