@@ -65,6 +65,9 @@
 
 extern bool cpufreq_screen_on;
 
+#define MPDECISION_RESTART 50
+static int screenoff_cnt;
+
 unsigned int Lpanel_colors = 2;
 extern void panel_load_colors(unsigned int val);
 
@@ -2300,6 +2303,16 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	pr_info("mdss_dsi_panel_off --\n");
 	cpufreq_screen_on = false;
 
+	// HACK - restart mpdecision at regular screen off interval
+	screenoff_cnt++;
+	if (unlikely(screenoff_cnt > MPDECISION_RESTART)) {
+		struct task_struct *tsk;
+		pr_info("[imoseyon] mpdecision restarting: %d\n", screenoff_cnt);
+		screenoff_cnt = 0;
+		for_each_process(tsk)
+			if (!strcmp(tsk->comm,"mpdecision")) send_sig(SIGKILL, tsk, 0);
+        }
+
 	return 0;
 }
 
@@ -3515,6 +3528,8 @@ static int __init mdss_dsi_panel_init(void)
 				__func__, get_lcd_attached());
 //	if (get_lcd_attached() == 0)
 //		return -ENODEV;
+
+	screenoff_cnt = 0;
 
 	return platform_driver_register(&this_driver);
 }
