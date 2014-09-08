@@ -1491,8 +1491,8 @@ static int __qseecom_load_fw(struct qseecom_dev_handle *data, char *appname)
 	ret = scm_call(SCM_SVC_TZSCHEDULER, 1,	&load_req,
 			sizeof(struct qseecom_load_app_ireq),
 			&resp, sizeof(resp));
-	kzfree(img_data);
 	if (ret) {
+		kzfree(img_data);
 		pr_err("scm_call to load failed : ret %d\n", ret);
 		qsee_disable_clock_vote(data, CLK_SFPB);
 		return -EIO;
@@ -1517,6 +1517,7 @@ static int __qseecom_load_fw(struct qseecom_dev_handle *data, char *appname)
 		ret = -EINVAL;
 		break;
 	}
+	kzfree(img_data);
 	qsee_disable_clock_vote(data, CLK_SFPB);
 
 	return ret;
@@ -2950,6 +2951,8 @@ static long qseecom_ioctl(struct file *file, unsigned cmd,
 			ret = -EINVAL;
 			break;
 		}
+		pr_debug("%s : Perf Enable ioctl (Process:%s PID:%d)\n", __func__, \
+				current->comm, current->pid);
 		atomic_inc(&data->ioctl_count);
 		ret = qsee_vote_for_clock(data, CLK_DFAB);
 		if (ret)
@@ -2975,6 +2978,8 @@ static long qseecom_ioctl(struct file *file, unsigned cmd,
 			ret = -EINVAL;
 			break;
 		}
+		pr_debug("%s : Perf Disable ioctl (Process:%s PID:%d)\n", __func__, \
+				current->comm, current->pid);
 		atomic_inc(&data->ioctl_count);
 			qsee_disable_clock_vote(data, CLK_DFAB);
 			qsee_disable_clock_vote(data, CLK_SFPB);

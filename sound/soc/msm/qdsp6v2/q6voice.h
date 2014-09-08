@@ -809,9 +809,11 @@ struct oem_dha_parm_send_t {
 
 struct oem_dha_parm_send_cmd {
 	struct apr_hdr hdr;
+#if !defined(CONFIG_MACH_S3VE3G_EUR) && !defined(CONFIG_MACH_MS01_EUR_3G) && !defined(CONFIG_MACH_MS01_EUR_LTE)
 	uint32_t mem_handle;
 	uint64_t mem_address;
 	uint32_t mem_size;
+#endif
 	struct oem_dha_parm_send_t dha_send;
 } __packed;
 #endif /* CONFIG_SEC_DHA_SOL_MAL*/
@@ -1397,6 +1399,8 @@ struct common_data {
 	uint32_t default_vol_step_val;
 	uint32_t default_vol_ramp_duration_ms;
 	uint32_t default_mute_ramp_duration_ms;
+	bool ec_ref_ext;
+	uint16_t ec_port_id;
 
 	/* APR to MVM in the Q6 */
 	void *apr_q6_mvm;
@@ -1516,8 +1520,13 @@ int voc_set_tx_mute(uint32_t session_id, uint32_t dir, uint32_t mute,
 int voc_set_rx_device_mute(uint32_t session_id, uint32_t mute,
 			   uint32_t ramp_duration);
 int voc_get_rx_device_mute(uint32_t session_id);
+#if !defined(CONFIG_MACH_KLTE_VZW)
 int voc_disable_cvp(uint32_t session_id);
 int voc_enable_cvp(uint32_t session_id);
+#else
+int voc_disable_device(uint32_t session_id);
+int voc_enable_device(uint32_t session_id);
+#endif
 int voc_set_route_flag(uint32_t session_id, uint8_t path_dir, uint8_t set);
 uint8_t voc_get_route_flag(uint32_t session_id, uint8_t path_dir);
 int voc_enable_dtmf_rx_detection(uint32_t session_id, uint32_t enable);
@@ -1537,6 +1546,8 @@ uint32_t voc_get_session_id(char *name);
 int voc_start_playback(uint32_t set, uint16_t port_id);
 int voc_start_record(uint32_t port_id, uint32_t set, uint32_t session_id);
 int voice_get_idx_for_session(u32 session_id);
+int voc_set_ext_ec_ref(uint16_t port_id, bool state);
+
 int voc_get_loopback_enable(void);
 void voc_set_loopback_enable(int loopback_enable);
 #endif

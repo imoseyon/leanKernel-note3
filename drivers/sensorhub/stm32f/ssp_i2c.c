@@ -563,6 +563,17 @@ void set_proximity_threshold(struct ssp_data *data,
 
 	msg= kzalloc(sizeof(*msg), GFP_KERNEL);
 	msg->cmd = MSG2SSP_AP_SENSOR_PROXTHRESHOLD;
+#if defined (CONFIG_SENSORS_SSP_MAX88920)
+	msg->length = 2;
+	msg->options = AP2HUB_WRITE;
+	msg->buffer = (char*) kzalloc(2, GFP_KERNEL);
+	msg->free_buffer = 1;
+
+	pr_err("[SSP]: %s - SENSOR_PROXTHRESHOL",__func__);
+
+	msg->buffer[0] = (unsigned char) uData1;
+	msg->buffer[1] = (unsigned char) uData2;
+#else
 	msg->length = 4;
 	msg->options = AP2HUB_WRITE;
 	msg->buffer = (char*) kzalloc(4, GFP_KERNEL);
@@ -574,7 +585,7 @@ void set_proximity_threshold(struct ssp_data *data,
 	msg->buffer[1] = (char) uData1;
 	msg->buffer[2] = ((char) (uData2 >> 8) & 0x07);
 	msg->buffer[3] = (char) uData2;
-
+#endif
 	iRet = ssp_spi_async(data, msg);
 
 	if (iRet != SUCCESS) {

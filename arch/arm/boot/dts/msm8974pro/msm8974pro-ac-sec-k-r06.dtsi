@@ -13,6 +13,7 @@
 /include/ "msm8974pro-sii8240_mhl-k-r02.dtsi"
 /include/ "msm8974pro-camera-sensor-k-r04.dtsi"
 /include/ "msm8974pro-fingerprint-sensor-k-r03.dtsi"
+/include/ "msm8974pro-w1.dtsi"
 
 / {
 	aliases {
@@ -26,7 +27,7 @@
 	serial@f991e000 {
 		status = "ok";
 	};
-	
+
 	serial@f995d000 {
 		status = "ok";
 	};
@@ -45,8 +46,6 @@
 	};
 
 	i2c@f9924000 {
-	qcom,scl-gpio = <&msmgpio 7 0>;
-	qcom,sda-gpio = <&msmgpio 6 0>;
 
 	synaptics_rmi4_i2c@20 {
 			compatible = "synaptics,rmi4-ts";
@@ -56,6 +55,8 @@
 			vcc_en-supply = <&pma8084_lvs2>;
 			synaptics,supply-num = <2>;		/* the number of regulators */
 			synaptics,supply-name = "max77826_ldo13", "8084_lvs2";	/* the name of regulators, in power-on order */
+			synaptics,scl-gpio = <&msmgpio 7 0x00>;
+			synaptics,sda-gpio = <&msmgpio 6 0x00>;
 			synaptics,irq-gpio = <&pma8084_gpios 8 0x1>;
 			synaptics,tsp-coords = <1079 1919>;
 			synaptics,i2c-pull-up = <1>;
@@ -187,9 +188,12 @@
 			irda_ice40,irq-gpio = <&msmgpio 101 0x00>;
 			irda_ice40,cresetb = <&pma8084_gpios 11 0x1>;
 			irda_ice40,i2c-pull-up = <1>;
+			/* only use usa_vzw tunable ant */
+			tunable,support = <1>;
+			tunable,cresetb = <&msmgpio 50 0x00>;
 		};
 	};
-	
+
 	gpio_keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
@@ -227,13 +231,6 @@
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
-	};
-
-	onewire {
-		compatible = "w1-gpio-msm";
-		gpios = <&msmgpio 69 0x00>;
-		linux,open-drain = <1>;
-		linux,slave-speed = <1>;
 	};
 
 	spi@f9923000 {
@@ -281,7 +278,6 @@
 			ssp,mcu_int2-gpio = <&msmgpio 86 0x00>;
 			ssp,ap_int-gpio = <&msmgpio 89 0x00>;
 			ssp,rst-gpio = <&msmgpio 9 0x00>;
-			ssp,vzw_prox-gpio = <&msmgpio 49 0x00>;
 			ssp,acc-position = <6>;
 			ssp,mag-position = <7>;
 			ssp,ap-rev=<5>;
@@ -343,22 +339,23 @@
 	mdss_dsi0: qcom,mdss_dsi@fd922800 {
 		iovdd-supply = <&pma8084_lvs4>;
 		qcom,dsi-pref-prim-pan-dual = <&dsi_dual_samsung_cmd_0>;
-		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;		
+		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;
+		qcom,dsi-pref-prim-pan-magna = <&dsi_samsung_fhd_k_mag>;			
 	};
-	
+
 	mdss_dsi1: qcom,mdss_dsi@fd922e00 {
 		qcom,dsi-pref-prim-pan-dual = <&dsi_dual_samsung_cmd_1>;
 	};
 
 	qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "dsi";
-		
+
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* 0 MB allocaed for fb0 */
-			qcom,memory-alt-reservation-size = <0x1000000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
+			qcom,memory-alt-reservation-size = <0x1F00000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
+			qcom,memblock-reserve = <0x03200000 0x00F00000>;
 			qcom,mdss-fb-split = <720 720>;
 		};
-		
+
 	};
 
 	qcom,ssusb@f9200000 {
@@ -433,12 +430,12 @@
 		qcom,earjack-fsa_en-expander-gpio = <310>;
 		qcom,send-end-active-high;
 		det-zones-list = <&det_zones 3 10000 10 0>,
-						 <&det_zones 930 10000 10 0>,
+						 <&det_zones 950 10000 10 0>,
 						 <&det_zones 2400 10000 10 1>,
 						 <&det_zones 9999 10000 10 1>;
-		but-zones-list = <&but_zones 0 0 145>,
-						 <&but_zones 1 146 310>,
-						 <&but_zones 2 311 640>;
+		but-zones-list = <&but_zones 0 0 155>,
+						 <&but_zones 1 156 313>,
+						 <&but_zones 2 314 643>;
 		mpp-channel-scaling = <4 1 3>;
 	};
 
@@ -499,14 +496,14 @@
 		/* SEC_BATTERY_FULL_CONDITION_SOC |
 		   SEC_BATTERY_FULL_CONDITION_NOTIMEFULL |
 		   SEC_BATTERY_FULL_CONDITION_VCELL */
-		battery,full_condition_type = <9>;
+		battery,full_condition_type = <13>;
 		battery,full_condition_soc = <97>;
-		battery,full_condition_vcell = <4300>;
+		battery,full_condition_vcell = <4350>;
 
 		battery,recharge_check_count = <1>;
 		battery,recharge_condition_type = <4>; /* SEC_BATTERY_RECHARGE_CONDITION_VCELL */
 		battery,recharge_condition_soc = <98>;
-		battery,recharge_condition_vcell = <4300>;
+		battery,recharge_condition_vcell = <4350>;
 
 		battery,charging_total_time = <21600>;
 		battery,recharging_total_time = <5400>;
@@ -524,10 +521,10 @@
 			battery,ovp_uvlo_check_type = <3>; /* SEC_BATTERY_OVP_UVLO_CHGPOLLING */
 			battery,full_check_type = <7>; /* SEC_BATTERY_FULLCHARGED_CHGPSY */
 
-			battery,input_current_limit = <1800 460 460 1800 460 900 1000 460 460 1000 650 1800 1800 460 1300 400 700 1300 300 1000 1800 460 460>;
-			battery,fast_charging_current = <2100 0 460 2100 460 1200 1000 460 0 1200 750 2100 2100 0 1300 400 700 1300 300 1000 2100 0 0>;
+			battery,input_current_limit = <1800 460 460 1800 460 900 1000 460 460 1000 760 1800 1800 460 1300 400 700 1300 300 1000 1800 460 460>;
+			battery,fast_charging_current = <2100 0 460 2100 460 1200 1000 460 0 1200 900 2100 2100 0 1300 400 700 1300 300 1000 2100 0 0>;
 			battery,full_check_current_1st = <200 0 200 200 200 200 200 200 0 200 200 200 200 0 200 200 200 200 200 200 200 0 0>;
-			battery,full_check_current_2nd = <2400 0 2400 1800 2400 2400 2400 2400 0 2400 2400 2400 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
+			battery,full_check_current_2nd = <2400 0 2400 2400 2400 2400 2400 2400 0 2400 2400 2400 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
 		};
 	};
 };
@@ -592,18 +589,18 @@
 
 	qcom,vdd-always-on;
 	qcom,vdd-voltage-level = <1800000 1800000>;
-	qcom,vdd-current-level = <2000 16000>;
+	qcom,vdd-current-level = <2000 32000>;
 
 	qcom,vdd-io-always-on;
 	qcom,vdd-io-voltage-level = <1800000 1800000>;
-	qcom,vdd-io-current-level = <2000 16000>;
+	qcom,vdd-io-current-level = <2000 32000>;
 
 	qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 	qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 	qcom,pad-drv-on = <0x7 0x4 0x4>; /* 16mA, 10mA, 10mA */
 	qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
 
-	qcom,current-limit = <16000>;
+	qcom,current-limit = <32000>;
 
 	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
 
@@ -634,6 +631,9 @@
 	qcom,vdd-io-voltage-level = <1800000 2950000>;
 	qcom,vdd-io-current-level = <6 22000>;
 	qcom,sup-voltages = <2950 2950>;
+
+
+	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000>;
 
 	status = "ok";
 };
@@ -740,7 +740,15 @@
 	};
 
 	gpio@c600 { /* GPIO 7 */
-		/* GRFC_12 */
+		/* Main Mic Switch */
+		qcom,mode = <1>;			/* Digital output */
+		qcom,output-type = <0>;	/* CMOS logic */
+		qcom,pull = <5>;			/* QPNP_PIN_PULL_NO */
+		qcom,invert = <0>;		/* Output low initially */
+		qcom,vin-sel = <2>;		/* PM8941 S3 = 1.8 V */
+		qcom,src-sel = <0>;		/* Constant */
+		qcom,out-strength = <2>;	/* Medium drive strength */
+		qcom,master-en = <1>;	/* Enable GPIO */
 	};
 
 	gpio@c700 { /* GPIO 8 */
@@ -754,6 +762,7 @@
 		/* Touchscreen external LDO enable */
 		qcom,mode = <1>;		/* Digital output */
 		qcom,out-strength = <1>;	/* Low */
+		qcom,vin-sel = <2>;		/* PMA8084 S4 = 1.8 V */
 		qcom,src-sel = <2>;		/* Function 1  */
 		qcom,master-en = <1>;
 	};
@@ -831,11 +840,11 @@
 		/* LCD_RESET */
 		qcom,mode = <1>;		/* Digital output */
 		qcom,pull = <5>;		/* Pull down */
-		qcom,output-type = <0>;		/* CMOS */		
+		qcom,output-type = <0>;		/* CMOS */
 		qcom,vin-sel = <2>;		/* PMA8084 S4 = 1.8 V */
 		qcom,out-strength = <1>;	/* Low */
 		qcom,src-sel = <0>;		/* constant */
-		qcom,master-en = <1>;	
+		qcom,master-en = <1>;
 	};
 
 	gpio@d100 { /* GPIO 18 */
@@ -853,7 +862,7 @@
 	gpio@d300 { /* GPIO 20 */
 		/* Headset Det */
 		qcom,mode = <0>;		/* iutput */
-		qcom,pull = <5>;		/* Pull down */		
+		qcom,pull = <5>;		/* Pull down */
 		qcom,vin-sel = <2>;	/* PMA8084 S4 = 1.8 V */
 		qcom,src-sel = <0>;	/* Constant */
 		qcom,master-en = <1>;
@@ -963,6 +972,8 @@
 
 		es705-gpioa-gpio = <&msmgpio 76 0>;
 		es705-gpiob-gpio = <&msmgpio 79 0>;
+		es705-uart-tx = <&msmgpio 0 0>;
+		es705-uart-rx = <&msmgpio 1 0>;
 		es705-reset-expander-gpio = <300>;
 
 		es705-slim-ifd = "es705-ifd";

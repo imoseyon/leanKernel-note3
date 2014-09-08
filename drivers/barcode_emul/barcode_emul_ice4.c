@@ -764,8 +764,6 @@ static void ir_remocon_work(struct barcode_emul_data *ir_data, int count)
 
 	int buf_size = count+2;
 	int ret;
-	int sleep_timing;
-	int end_data;
 	int emission_time;
 	int ack_pin_onoff;
 
@@ -836,18 +834,6 @@ static void ir_remocon_work(struct barcode_emul_data *ir_data, int count)
 	}
 */
 	data->count = 2;
-
-	end_data = data->i2c_block_transfer.data[count-2] << 8
-		| data->i2c_block_transfer.data[count-1];
-
-	emission_time = \
-		(1000 * (data->ir_sum - end_data) / (data->ir_freq)) + 10;
-	sleep_timing = emission_time - 130;
-	if (sleep_timing > 0)
-		msleep(sleep_timing);
-/*
-	printk(KERN_INFO "%s: sleep_timing = %d\n", __func__, sleep_timing);
-*/
 	emission_time = \
 		(1000 * (data->ir_sum) / (data->ir_freq)) + 50;
 	if (emission_time > 0)

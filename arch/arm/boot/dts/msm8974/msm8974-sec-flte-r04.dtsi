@@ -39,7 +39,6 @@
 	mdss_mdp: qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "dsi";
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1F40000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
 		};
 	};
@@ -430,15 +429,6 @@ samsung,vibrator {
 						 <&but_zones 1 160 321>,
 						 <&but_zones 2 322 645>;
 		mpp-channel-scaling = <4 1 3>;
-	};
-
-	usb2_otg_sw: regulator-tpd4s214 {
-		compatible = "regulator-fixed";
-		regulator-name = "usb2_otg_sw";
-		gpio = <&pm8941_gpios 20 0>;
-		parent-supply = <&pm8941_boost>;
-		startup-delay-us = <17000>;
-		enable-active-high;
 	};
 
 	hsic_host: hsic@f9a00000 {
@@ -859,7 +849,7 @@ samsung,vibrator {
 		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */
 		qcom,vin-sel = <2>; 	/* QPNP_PIN_VIN2 */
 		qcom,out-strength = <3>;	/* QPNP_PIN_OUT_STRENGTH_HIGH */
-		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_2 : LPG8*/ 
+		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_2 : LPG8*/
 		qcom,master-en = <1>;
 	};
 

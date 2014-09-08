@@ -211,11 +211,6 @@ static int inline __rotator_to_pipe(struct mdss_mdp_rotator_session *rot,
 	pipe->params_changed++;
 	rot->params_changed = 0;
 
-	/*
-	 * Clear previous SMP reservations and reserve according to the
-	 * latest configuration+	 */
-	mdss_mdp_smp_unreserve(pipe);
-
 	ret = mdss_mdp_smp_reserve(pipe);
 	if (ret) {
 		pr_err("unable to mdss_mdp_smp_reserve rot data\n");
@@ -492,6 +487,7 @@ int mdss_mdp_rotator_setup(struct msm_fb_data_type *mfd,
 		rot->flags |= MDP_DEINTERLACE;
 		rot->src_rect.h /= 2;
 		rot->src_rect.y = DIV_ROUND_UP(rot->src_rect.y, 2);
+		rot->src_rect.y &= ~1;
 	}
 
 	rot->dst = rot->src_rect;
@@ -621,7 +617,7 @@ static int mdss_mdp_rotator_finish(struct mdss_mdp_rotator_session *rot)
 	}
 
 	if (!list_empty(&rot->list))
-		list_del_init(&rot->list);
+		list_del(&rot->list);
 
 	rot_sync_pt_data = rot->rot_sync_pt_data;
 	commit_work = rot->commit_work;
@@ -678,7 +674,9 @@ int mdss_mdp_rotator_release_all(void)
 int mdss_mdp_rotator_play(struct msm_fb_data_type *mfd,
 			    struct msmfb_overlay_data *req)
 {
+#if defined(CONFIG_FB_MSM_CMD_MODE)
 	struct mdss_mdp_ctl *ctl = mfd_to_ctl(mfd); 
+#endif
 	struct mdss_mdp_rotator_session *rot;
 	int ret;
 	u32 flgs;
@@ -699,8 +697,10 @@ int mdss_mdp_rotator_play(struct msm_fb_data_type *mfd,
 		goto dst_buf_fail;
 	}
 
+#if defined(CONFIG_FB_MSM_CMD_MODE)
 	if (!is_mdss_iommu_attached()) 
 		mdss_iommu_attach(ctl->mdata); 
+#endif
 
 	mdss_mdp_overlay_free_buf(&rot->src_buf);
 	ret = mdss_mdp_overlay_get_buf(mfd, &rot->src_buf, &req->data, 1, flgs);
@@ -723,6 +723,17 @@ int mdss_mdp_rotator_play(struct msm_fb_data_type *mfd,
 		pr_err("rotator queue error session id=%x\n", req->id);
 
 dst_buf_fail:
+	if(ret){ 
+		if (rot && rot->use_sync_pt){ 
+			if (rot->rot_sync_pt_data) { 
+				atomic_inc(&rot->rot_sync_pt_data->commit_cnt); 
+				mdss_fb_signal_timeline(rot->rot_sync_pt_data); 
+				pr_err("release fence as this commit is failed.\n"); 
+			} else { 
+				pr_err("rot_sync_pt_data is NULL\n"); 
+			}	 
+		} 
+	} 
 	mutex_unlock(&rotator_lock);
 	return ret;
 }

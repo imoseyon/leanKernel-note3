@@ -14,6 +14,7 @@
 /include/ "msm8974-camera-sensor-hlte-r02.dtsi"
 /include/ "msm8974-sii8240_mhl-hlte-r06.dtsi"
 /include/ "msm8974-max77803-hlte-r06.dtsi"
+/include/ "msm8974-w1.dtsi"
 
 / {
 	aliases {
@@ -675,12 +676,6 @@
 		bluetooth_hostwake,irq-gpio = <&msmgpio 75 0x00>;
 	};
 
-	onewire {
-		compatible = "w1-gpio-msm";
-		gpios = <&msmgpio 69 0x00>;
-		linux,open-drain = <1>;
-		linux,slave-speed = <1>;
-	};
 };
 
 &pm8941_lsid1 {

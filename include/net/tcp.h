@@ -123,7 +123,8 @@ extern void tcp_time_wait(struct sock *sk, int state, int timeo);
 #endif
 #define TCP_RTO_MAX	((unsigned)(120*HZ))
 #define TCP_RTO_MIN	((unsigned)(HZ/5))
-#ifdef CONFIG_MACH_H3G_CHN_CMCC
+#if defined(CONFIG_MACH_KLTE_CMCC) || defined(CONFIG_MACH_H3G_CHN_CMCC) || defined(CONFIG_MACH_HLTE_CHN_CMCC) || \
+defined(CONFIG_MACH_HLTE_CHN_TDOPEN) || defined(CONFIG_MACH_JSGLTE_CHN_CMCC)
 #define TCP_TIMEOUT_INIT ((unsigned)(3*HZ))	/* RFC2988bis initial RTO value	*/
 #else
 #define TCP_TIMEOUT_INIT ((unsigned)(1*HZ))	/* RFC2988bis initial RTO value	*/

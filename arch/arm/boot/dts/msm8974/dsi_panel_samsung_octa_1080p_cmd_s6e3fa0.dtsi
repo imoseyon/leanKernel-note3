@@ -17,7 +17,7 @@
 		label = "samsung amoled 1080p command mode dsi S6E3FA0 panel";
 		status = "disable";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-
+        qcom,cont-splash-enabled = <1>;
 		qcom,enable-gpio = <&pm8941_gpios 14 0>;
 		qcom,rst-gpio = <&pm8941_gpios 19 0>;
 		qcom,te-gpio = <&msmgpio 12 0>;

@@ -336,7 +336,25 @@ config SEC_LOGGER_BUFFER_EXPANSION
 	help
 	  This is used to expand buffers of logger.
 	  This feature is enabled in defconfig.
+
+config SEC_LOGGER_BUFFER_EXPANSION_SIZE
+	int "Samsung Logger Buffer Expansion Size(MB)"
+	depends on SEC_LOGGER_BUFFER_EXPANSION
+	default 2
+	help
+	  This is used to expand main buffer of logger(MB).
+
 endif
+
+config SEC_FORKHANG_DEBUG
+	bool "Debug Feature for Newly Forked task getting HANg on mmap_sem down_read()"
+	default n
+	help
+	  mmap_sem writer lock logging for ram dump analysis.
+	  Collects kernel debug log.
+	  Log is collected in the no-cache area.
+	  This feature is enabled in defconfig.
+
 config SEC_DEBUG_USER
 	bool "Panic on Userspace fault"
 	default y
@@ -428,6 +446,12 @@ config SEC_DEBUG_NOCACHE_LOG_IN_LEVEL_LOW
 	help
 	  Enable nocache logging in debug level LOW.
 
+config SEC_MONITOR_BATTERY_REMOVAL
+	bool "Enable monitering whether normal power sequence or not"
+	default n
+	help
+	  Enable monitering Power off & battery removal.
+
 comment "PowerManagement Feature"
 menuconfig SEC_PM
 	bool "Samsung TN PowerManagement Feature"
@@ -496,5 +520,18 @@ config SEC_RESTRICT_ROOTING_LOG
 	help
 	   Say Y here if you want to see result of restricting SETUID or FORK. It will
 	   be displayed by kernel error log. Saying N will not be displayed anything.
+
+config RESTART_REASON_DDR
+	bool "Save restart reason in DDR reserved area"
+	default n
+	help
+	  This comes in handy backup, when restart reason saved in IMEM is lost.
+
+comment "BSP Feature"
+menuconfig SEC_BSP
+	bool "Samsung TN BSP Feature"
+	default n
+	help
+	  Samsung TN BSP Feature.
 
 endmenu

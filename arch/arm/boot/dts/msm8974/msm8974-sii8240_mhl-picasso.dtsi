@@ -27,7 +27,7 @@ i2c@f9965000 {
 			sii8240,gpio_mhl_en = <&pm8941_gpios 32 0x1>;
 			sii8240,gpio_mhl_en_type = "pm_gpios";
 			sii8240,gpio_ta_int = <&pm8941_gpios 29 0x1>;
-			sii8240,swing_level = <0x2D>;
+			sii8240,swing_level = <0x2E>;
 
 			sii8240,gpio_mhl_irq = <&msmgpio 31 0x00>;
 			sii8240,gpio_mhl_wakeup = <0>; /* <&msmgpio 96 0x00>; */

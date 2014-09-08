@@ -37,11 +37,10 @@ static struct snd_pcm_hw_constraint_list constraints_sample_rates = {
 static int multimedia_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
-	snd_pcm_hw_constraint_list(substream->runtime, 0,
+	return snd_pcm_hw_constraint_list(substream->runtime, 0,
 		SNDRV_PCM_HW_PARAM_RATE,
 		&constraints_sample_rates);
 
-	return 0;
 }
 
 static struct snd_soc_dai_ops msm_fe_Multimedia_dai_ops = {
@@ -419,6 +418,30 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		},
 		.ops = &msm_fe_dai_ops,
 		.name = "INT_FM_HOSTLESS",
+	},
+	{
+		.playback = {
+			.stream_name = "INT_HFP_BT Hostless Playback",
+			.aif_name = "INTHFP_DL_HL",
+			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     16000,
+		},
+		.capture = {
+			.stream_name = "INT_HFP_BT Hostless Capture",
+			.aif_name = "INTHFP_UL_HL",
+			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     16000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "INT_HFP_BT_HOSTLESS",
 	},
 	{
 		.playback = {

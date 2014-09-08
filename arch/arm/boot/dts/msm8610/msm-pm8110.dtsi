@@ -72,29 +72,31 @@
 			qcom,chg-vadc = <&pm8110_vadc>;
 			qcom,chg-adc_tm = <&pm8110_adc_tm>;
 
+			sec,imax-ta = <700>;
+			sec,imax-usb = <500>;
 			sec,charging-time = <360>;
 			sec,recharging-time = <90>;
 			sec,temp-high-block-event = <600>;
-			sec,temp-high-recover-event = <420>;
-			sec,temp-low-block-event = <50>;
-			sec,temp-low-recover-event = <10>;
+			sec,temp-high-recover-event = <460>;
+			sec,temp-low-block-event = <(-50)>;
+			sec,temp-low-recover-event = <0>;
 			sec,temp-high-block-normal = <600>;
-			sec,temp-high-recover-normal = <420>;
-			sec,temp-low-block-normal = <50>;
-			sec,temp-low-recover-normal = <10>;
+			sec,temp-high-recover-normal = <460>;
+			sec,temp-low-block-normal = <(-50)>;
+			sec,temp-low-recover-normal = <0>;
 			sec,temp-high-block-lpm = <600>;
-			sec,temp-high-recover-lpm = <420>;
-			sec,temp-low-block-lpm = <50>;
-			sec,temp-low-recover-lpm = <10>;
-			sec,event-check = <1>;
-			sec,event-waiting-time = <1>;
+			sec,temp-high-recover-lpm = <460>;
+			sec,temp-low-block-lpm = <(-50)>;
+			sec,temp-low-recover-lpm = <0>;
+			sec,event-check = <0>;
+			sec,event-waiting-time = <600>;
 			sec,capacity-max = <1000>;
 			sec,capacity-max-margin = <50>;
 			sec,capacity-min = <0>;
-			sec,ui-full-soc = <99>;
-			sec,ui-full-current = <150>;
+			sec,ui-full-soc = <97>;
+			sec,ui-full-current = <170>;
+			sec,ui-full-voltage = <4250>;
 			sec,ui-full-count = <2>;
-			sec,en-charging-term-time = <0>;
 			sec,charging-term-time = <40>;
 			sec,recharging-voltage = <4300>;
 			sec,poweroff-check-soc = <1>;
@@ -342,7 +344,7 @@
 			status = "disabled";
 
 			qcom,r-sense-uohm = <10000>;
-			qcom,v-cutoff-uv = <3350000>;
+			qcom,v-cutoff-uv = <3400000>;
 			qcom,max-voltage-uv = <4350000>;
 			qcom,r-conn-mohm = <0>;
 			qcom,shutdown-soc-valid-limit = <100>;
@@ -358,11 +360,15 @@
 			qcom,low-voltage-threshold = <3420000>;
 			qcom,tm-temp-margin = <5000>;
 			qcom,low-ocv-correction-limit-uv = <100>;
-			qcom,high-ocv-correction-limit-uv = <50>;
+			qcom,high-ocv-correction-limit-uv = <250>;
 			qcom,hold-soc-est = <3>;
 			qcom,bms-vadc = <&pm8110_vadc>;
 			qcom,bms-iadc = <&pm8110_iadc>;
 			qcom,bms-adc_tm = <&pm8110_adc_tm>;
+
+			qcom,batt-pres-status@1208 {
+				reg = <0x1208 0x1>;
+			};
 
 			qcom,bms-iadc@3800 {
 				reg = <0x3800 0x100>;

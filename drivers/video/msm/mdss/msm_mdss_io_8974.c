@@ -306,7 +306,7 @@ static int mdss_dsi_clk_prepare(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		ctrl_pdata->ndx,
 		ctrl_pdata->esc_clk->prepare_count,
 		ctrl_pdata->byte_clk->prepare_count,
-		ctrl_pdata->pixel_clk->prepare_count); 
+		ctrl_pdata->pixel_clk->prepare_count);
 #endif
 
 	rc = clk_prepare(ctrl_pdata->esc_clk);
@@ -332,7 +332,7 @@ static int mdss_dsi_clk_prepare(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 			ctrl_pdata->ndx,
 			ctrl_pdata->esc_clk->prepare_count,
 			ctrl_pdata->byte_clk->prepare_count,
-			ctrl_pdata->pixel_clk->prepare_count); 
+			ctrl_pdata->pixel_clk->prepare_count);
 #endif
 
 	return rc;
@@ -376,7 +376,11 @@ static void mdss_dsi_clk_unprepare(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 static int mdss_dsi_clk_set_rate(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
+#if defined(CONFIG_SEC_ATLANTIC_PROJECT) || defined(CONFIG_SEC_PATEK_PROJECT)
+	u32 esc_clk_rate = 12000000;
+#else
 	u32 esc_clk_rate = 19200000;
+#endif
 	int rc = 0;
 
 	if (!ctrl_pdata) {
@@ -481,38 +485,62 @@ static void mdss_dsi_clk_disable(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 static int mdss_dsi_enable_clks(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	int rc = 0;
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6TNMR7_PT_PANEL)
+	rc = mdss_dsi_clk_set_rate(ctrl);
+	if (rc) {
+		pr_err("%s: failed to set clk rates. rc=%d\n",
+			__func__, rc);
+		goto error;
+	}
 
-			rc = mdss_dsi_enable_bus_clocks(ctrl);
-			if (rc) {
-				pr_err("%s: failed to enable bus clks. rc=%d\n",
-					__func__, rc);
-				goto error;
-			}
+	rc = mdss_dsi_clk_prepare(ctrl);
+	if (rc) {
+		pr_err("%s: failed to prepare clks. rc=%d\n",
+			__func__, rc);
+		goto error;
+	}
 
-			rc = mdss_dsi_clk_set_rate(ctrl);
-			if (rc) {
-				pr_err("%s: failed to set clk rates. rc=%d\n",
-					__func__, rc);
-				mdss_dsi_disable_bus_clocks(ctrl);
-				goto error;
-			}
+	rc = mdss_dsi_clk_enable(ctrl);
+	if (rc) {
+		pr_err("%s: failed to enable clks. rc=%d\n",
+			__func__, rc);
+		mdss_dsi_clk_unprepare(ctrl);
+		goto error;
+	}
+#else
+	rc = mdss_dsi_enable_bus_clocks(ctrl);
+	if (rc) {
+		pr_err("%s: failed to enable bus clks. rc=%d\n",
+			__func__, rc);
+		goto error;
+	}
 
-			rc = mdss_dsi_clk_prepare(ctrl);
-			if (rc) {
-				pr_err("%s: failed to prepare clks. rc=%d\n",
-					__func__, rc);
-				mdss_dsi_disable_bus_clocks(ctrl);
-				goto error;
-			}
+	rc = mdss_dsi_clk_set_rate(ctrl);
+	if (rc) {
+		pr_err("%s: failed to set clk rates. rc=%d\n",
+			__func__, rc);
+		mdss_dsi_disable_bus_clocks(ctrl);
+		goto error;
+	}
 
-			rc = mdss_dsi_clk_enable(ctrl);
-			if (rc) {
-				pr_err("%s: failed to enable clks. rc=%d\n",
-					__func__, rc);
-				mdss_dsi_clk_unprepare(ctrl);
-				mdss_dsi_disable_bus_clocks(ctrl);
-				goto error;
-			}
+	rc = mdss_dsi_clk_prepare(ctrl);
+	if (rc) {
+		pr_err("%s: failed to prepare clks. rc=%d\n",
+			__func__, rc);
+		mdss_dsi_disable_bus_clocks(ctrl);
+		goto error;
+	}
+
+	rc = mdss_dsi_clk_enable(ctrl);
+	if (rc) {
+		pr_err("%s: failed to enable clks. rc=%d\n",
+			__func__, rc);
+		mdss_dsi_clk_unprepare(ctrl);
+		mdss_dsi_disable_bus_clocks(ctrl);
+		goto error;
+	}
+
+#endif
 
 error:
 	return rc;
@@ -545,33 +573,33 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 		}
 		if (ctrl->clk_cnt == 0) {
 			rc = mdss_dsi_enable_clks(ctrl);
-			if (rc)		
+			if (rc)
 			goto error;
 		}
 		ctrl->clk_cnt++;
 #ifdef DSI_CLK_DEBUG
 		pr_err("[QCT_TEST] enable -- : %d , (%d) (%d)\n",
-				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt); 
+				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt);
 #endif
 	} else {
 #ifdef DSI_CLK_DEBUG
 		pr_err("[QCT_TEST] disable ++ : %d , (%d) (%d)\n",
-				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt); 
+				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt);
 #endif
 		if (ctrl->clk_cnt) {
 			ctrl->clk_cnt--;
 			if (ctrl->clk_cnt == 0) {
 				if (ctrl->ndx == DSI_CTRL_1 &&
-					ctrl->shared_pdata.broadcast_enable) {					
+					ctrl->shared_pdata.broadcast_enable) {
 					if(left_ctrl->clk_cnt){
 						left_ctrl->clk_cnt--;
 						if(!left_ctrl->clk_cnt){
 							mdss_dsi_clk_disable(left_ctrl);
 							mdss_dsi_clk_unprepare(left_ctrl);
-							mdss_dsi_disable_bus_clocks(left_ctrl);							
+							mdss_dsi_disable_bus_clocks(left_ctrl);
 						}
-					}									
-				}			
+					}
+				}
 				mdss_dsi_clk_disable(ctrl);
 				mdss_dsi_clk_unprepare(ctrl);
 				mdss_dsi_disable_bus_clocks(ctrl);
@@ -579,14 +607,14 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 		}
 #ifdef DSI_CLK_DEBUG
 		pr_err("[QCT_TEST] disable -- : %d , (%d) (%d)\n",
-				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt); 
+				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt);
 #endif
 	}
 #ifdef XXX
 	if (ctrl->shared_pdata.broadcast_enable) {
 		pr_err("%s: ctrl ndx=%d enabled=%d clk_cnt=%d\n",
 			__func__, left_ctrl->ndx, enable, left_ctrl->clk_cnt);
-		pr_err("%s: DSI%d Byte rcnt=%d pcnt=%d\n", 
+		pr_err("%s: DSI%d Byte rcnt=%d pcnt=%d\n",
 			__func__, left_ctrl->ndx,(int)left_ctrl->byte_clk->count, (int)left_ctrl->byte_clk->prepare_count);
 	}
 	pr_err("%s: ctrl ndx=%d enabled=%d clk_cnt=%d\n",
@@ -595,7 +623,7 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 #endif
 
 error:
-	//mutex_unlock(&ctrl->mutex);	
+	//mutex_unlock(&ctrl->mutex);
 	mutex_unlock(&dual_clk_lock);
 	return rc;
 }
@@ -610,7 +638,7 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 #if defined(CONFIG_FB_MSM_MDSS_DSI_DBG)
 #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
 	if (ctrl->shared_pdata.broadcast_enable)
-		xlog(__func__, ctrl->ndx, enable, ctrl->clk_cnt, left_ctrl->clk_cnt, left_ctrl->clk_cnt_by_dsi1, right_ctrl_pdata->clk_cnt); 
+		xlog(__func__, ctrl->ndx, enable, ctrl->clk_cnt, left_ctrl->clk_cnt, left_ctrl->clk_cnt_by_dsi1, right_ctrl_pdata->clk_cnt);
 #endif
 #endif
 
@@ -629,7 +657,7 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 
 			if (ctrl->clk_cnt == 0) {
 				rc = mdss_dsi_enable_clks(ctrl);
-				if (rc) 	
+				if (rc)
 				goto error;
 			}
 
@@ -637,13 +665,13 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 			if (left_ctrl) {
 				if (ctrl->clk_cnt == 0 && left_ctrl->clk_cnt_by_dsi1 == 0) {
 					rc = mdss_dsi_enable_clks(ctrl);
-					if (rc) 	
+					if (rc)
 						goto error;
 				}
 			} else {
 				if (ctrl->clk_cnt == 0) {
 					rc = mdss_dsi_enable_clks(ctrl);
-					if (rc) 	
+					if (rc)
 						goto error;
 				}
 			}
@@ -654,24 +682,26 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 #ifdef DSI_CLK_DEBUG
 	if (ctrl->shared_pdata.broadcast_enable)
 		pr_err("[QCT_TEST] enable -- : %d , (%d) (%d) , by(%d)\n",
-				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt,left_ctrl->clk_cnt_by_dsi1); 
+				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt,left_ctrl->clk_cnt_by_dsi1);
 #endif
 	} else {
 #ifdef DSI_CLK_DEBUG
 	if (ctrl->shared_pdata.broadcast_enable)
 		pr_err("[QCT_TEST] disable ++ : %d , (%d) (%d) , by(%d)\n",
-				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt,left_ctrl->clk_cnt_by_dsi1); 
+				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt,left_ctrl->clk_cnt_by_dsi1);
 #endif
 
 		if (ctrl->ndx == DSI_CTRL_1 &&
 			ctrl->shared_pdata.broadcast_enable) {
-			
+
 				if(left_ctrl->clk_cnt_by_dsi1) {
 					left_ctrl->clk_cnt_by_dsi1--;
 					if(left_ctrl->clk_cnt_by_dsi1 == 0 && left_ctrl->clk_cnt == 0 ) {
 						mdss_dsi_clk_disable(left_ctrl);
 						mdss_dsi_clk_unprepare(left_ctrl);
+#if !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6TNMR7_PT_PANEL)
 						mdss_dsi_disable_bus_clocks(left_ctrl);
+#endif
 					}
 				}
 
@@ -680,10 +710,12 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 					if (ctrl->clk_cnt == 0) {
 						mdss_dsi_clk_disable(ctrl);
 						mdss_dsi_clk_unprepare(ctrl);
+#if !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6TNMR7_PT_PANEL)
 						mdss_dsi_disable_bus_clocks(ctrl);
+#endif
 					}
 				}
-		} 
+		}
 		else if (ctrl->ndx == DSI_CTRL_0) {
 			if(ctrl->clk_cnt) {
 				ctrl->clk_cnt--;
@@ -691,13 +723,17 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 					if (ctrl->clk_cnt == 0 && left_ctrl->clk_cnt_by_dsi1 == 0) {
 						mdss_dsi_clk_disable(ctrl);
 						mdss_dsi_clk_unprepare(ctrl);
+#if !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6TNMR7_PT_PANEL)
 						mdss_dsi_disable_bus_clocks(ctrl);
+#endif
 					}
 				} else {
 					if (ctrl->clk_cnt == 0) {
 						mdss_dsi_clk_disable(ctrl);
 						mdss_dsi_clk_unprepare(ctrl);
+#if !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6TNMR7_PT_PANEL)
 						mdss_dsi_disable_bus_clocks(ctrl);
+#endif
 					}
 				}
 			}
@@ -706,23 +742,24 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 #ifdef DSI_CLK_DEBUG
 	if (ctrl->shared_pdata.broadcast_enable)
 		pr_err("[QCT_TEST] disable -- : %d , (%d) (%d) , by(%d)\n",
-				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt,left_ctrl->clk_cnt_by_dsi1); 
+				ctrl->ndx, left_ctrl->clk_cnt, right_ctrl_pdata->clk_cnt,left_ctrl->clk_cnt_by_dsi1);
 #endif
 	}
 #ifdef XXX
 	if (ctrl->shared_pdata.broadcast_enable) {
 		pr_err("%s: ctrl ndx=%d enabled=%d clk_cnt=%d\n",
 			__func__, left_ctrl->ndx, enable, left_ctrl->clk_cnt);
-		pr_err("%s: DSI%d Byte rcnt=%d pcnt=%d\n", 
+		pr_err("%s: DSI%d Byte rcnt=%d pcnt=%d\n",
 			__func__, left_ctrl->ndx,(int)left_ctrl->byte_clk->count, (int)left_ctrl->byte_clk->prepare_count);
 	}
-	pr_err("%s: ctrl ndx=%d enabled=%d clk_cnt=%d\n",
-			__func__, ctrl->ndx, enable, ctrl->clk_cnt);
+
 	pr_err("%s: DSI%d Byte rcnt=%d pcnt=%d\n", __func__, ctrl->ndx,(int)ctrl->byte_clk->count, (int)ctrl->byte_clk->prepare_count);
 #endif
+	pr_debug("%s: ctrl ndx=%d enabled=%d clk_cnt=%d\n",
+				__func__, ctrl->ndx, enable, ctrl->clk_cnt);
 
 error:
-	//mutex_unlock(&ctrl->mutex);	
+	//mutex_unlock(&ctrl->mutex);
 	mutex_unlock(&dual_clk_lock);
 	return rc;
 }

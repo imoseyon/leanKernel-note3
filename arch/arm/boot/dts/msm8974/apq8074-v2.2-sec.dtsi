@@ -19,9 +19,9 @@
 /include/ "msm8974-v2.2-sec.dtsi"
 
 &soc {
-	qcom,qseecom@a700000 {
+	qcom,qseecom@a100000 {
 		compatible = "qcom,qseecom";
-		reg = <0x0a700000 0x500000>;
+		reg = <0x0a100000 0xb00000>;
 		reg-names = "secapp-region";
 		qcom,disk-encrypt-pipe-pair = <2>;
 		qcom,hlos-ce-hw-instance = <1>;
@@ -39,7 +39,8 @@
 };
 
 &memory_hole {
-	qcom,memblock-remove = <0x6c00000 0xa600000>; /* Address and size of the hole */
+	qcom,memblock-remove = <0x6c00000 0x900000
+				0xa100000 0x6100000>; /* Address and size of the hole */
 };
 
 &qseecom {
@@ -48,6 +49,6 @@
 
 &sdcc3 {
 	qcom,sup-voltages = <2000 2000>;
-	status = "ok";
+	status = "disabled";
 };
 

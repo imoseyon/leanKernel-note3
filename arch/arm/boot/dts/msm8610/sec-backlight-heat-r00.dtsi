@@ -18,37 +18,42 @@
 		sec,control-type="easy_scale";
 		sec,easyscale-address=<0x1A>;
 		sec,max-brightness-value = <255>;
-		sec,min-brightness-value = <31>;
-		sec,dimming-value = <31>;
+		sec,min-brightness-value = <10>;
+		sec,dimming-value = <10>;
 		sec,max-brightness-in-blu-value = <32>;
-		sec,brightness-table-len = <26>;
+		sec,brightness-table-len = <31>;
 		sec,brightness-table = <
 							0 0
-							20 20
-							26 26
-							33 33
-							39 39
-							46 46
-							52 52
-							59 59
-							65 65
-							72 72
-							78 78
-							84 84
-							91 91
-							97 97
-							104 104
-							110 110
-							117 117
-							123 123
-							140 140
-							156 156
-							173 173
-							189 189
-							206 206
-							222 222
-							239 239
-							255 255
+							10 5		/* min */
+							20 13
+							30 20
+							40 27
+							50 34
+							60 41
+							70 48
+							80 55
+							90 62
+							100 69
+							110 76
+							120 82
+							130 88
+							140 95
+							143 100		/* default */
+							148 103
+							156 109
+							164 115
+							172 121
+							180 127
+							188 133
+							196 139
+							204 145
+							212 151
+							220 157
+							228 163
+							236 170
+							244 178
+							252 186
+							255 207		/* max */
 							>;
 	};
 };

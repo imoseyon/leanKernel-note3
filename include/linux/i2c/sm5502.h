@@ -25,12 +25,21 @@
 #include "tsu6721.h"
 
 enum {
-	SM5502_DETACHED,
-	SM5502_ATTACHED
+	SM5502_NONE = -1,
+	SM5502_DETACHED = 0,
+	SM5502_ATTACHED = 1
 };
 
+enum {
+	LANHUB = 0,
+	LANHUB_TA = 1,
+};
+extern struct switch_dev switch_dock;
 struct sm5502_platform_data {
 	void (*callback)(enum cable_type_t cable_type, int attached);
+#if defined(CONFIG_MUIC_SM5502_SUPPORT_LANHUB_TA)
+	void (*lanhub_cb)(enum cable_type_t cable_type, int attached, bool lanhub_ta);
+#endif
 	void (*oxp_callback)(int state);
 	void (*mhl_sel) (bool onoff);
 	int	(*dock_init) (void);
@@ -47,6 +56,9 @@ struct sm5502_platform_data {
 extern int check_sm5502_jig_state(void);
 extern struct sm5502_platform_data sm5502_pdata;
 extern void sm5502_callback(enum cable_type_t cable_type, int attached);
+#if defined(CONFIG_MUIC_SM5502_SUPPORT_LANHUB_TA)
+extern void sm5502_lanhub_callback(enum cable_type_t cable_type, int attached, bool lanhub_ta);
+#endif
 extern void sm5502_oxp_callback(int state);
 extern int sm5502_dock_init(void);
 

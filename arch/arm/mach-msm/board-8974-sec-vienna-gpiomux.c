@@ -57,11 +57,20 @@ static struct gpiomux_setting gpio_suspend_config[] = {
 static struct msm_gpiomux_config gpio_nc_configs[] __initdata = {
 	GPIOMUX_SET_NC(8),
 	GPIOMUX_SET_NC(9),
-	/*GPIOMUX_SET_NC(23),*/
-	GPIOMUX_SET_NC(24),
+#if defined(CONFIG_MACH_VIENNAVZW) || defined(CONFIG_MACH_VIENNAATT)
+	GPIOMUX_SET_NC(23),
+#else
 	GPIOMUX_SET_NC(28),
+#endif
+	GPIOMUX_SET_NC(24),
 	GPIOMUX_SET_NC(63),
 	GPIOMUX_SET_NC(94),
+#if defined(CONFIG_MACH_VIENNAATT)
+	GPIOMUX_SET_NC(104),
+	GPIOMUX_SET_NC(112),
+	GPIOMUX_SET_NC(113),
+	GPIOMUX_SET_NC(119),
+#endif /* CONFIG_MACH_VIENNAATT */
 };
 
 static struct msm_gpiomux_config gpio_rev05_nc_configs[] __initdata = {
@@ -698,14 +707,12 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
  	{
 		.gpio      = 25,		/* BLSP5 QUP I2C_DAT */
 		.settings = {
-			[GPIOMUX_ACTIVE]    = &gpio_i2c_config_4,
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_4,
 		},
 	},
 	{
 		.gpio      = 26,		/* BLSP5 QUP I2C_CLK */
 		.settings = {
-			[GPIOMUX_ACTIVE]    = &gpio_i2c_config_5,
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_5,
 		},
 	},
@@ -860,6 +867,17 @@ static struct gpiomux_setting gpio_batteryotg_config = {
 	.dir = GPIOMUX_OUT_LOW,
 };
 
+#if defined(CONFIG_MACH_VIENNAVZW) || defined(CONFIG_MACH_VIENNAATT)
+static struct msm_gpiomux_config msm_batteryotg_configs[] __initdata = {
+	{
+		.gpio = 28,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_batteryotg_config,
+			[GPIOMUX_SUSPENDED] = &gpio_batteryotg_config,
+		},
+	},
+};
+#else
 static struct msm_gpiomux_config msm_batteryotg_configs[] __initdata = {
 	{
 		.gpio = 23,
@@ -869,17 +887,11 @@ static struct msm_gpiomux_config msm_batteryotg_configs[] __initdata = {
 		},
 	},
 };
+#endif
 
 static struct msm_gpiomux_config msm_sensor_configs[] __initdata = {
 	{
 		.gpio = 15, /* CAM_MCLK0 */
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &cam_settings[0],
-			[GPIOMUX_SUSPENDED] = &cam_settings[1],
-		},
-	},
-	{
-		.gpio = 16, /* CAM_MCLK1 */
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &cam_settings[0],
 			[GPIOMUX_SUSPENDED] = &cam_settings[1],
@@ -903,7 +915,7 @@ static struct msm_gpiomux_config msm_sensor_configs[] __initdata = {
 		.gpio = 19, /* CCI_I2C_SDA0 */
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &cam_settings[0],
-			[GPIOMUX_SUSPENDED] = &cam_settings[0],
+			[GPIOMUX_SUSPENDED] = &gpio_suspend_config[2],
 		},
 	},
 	{

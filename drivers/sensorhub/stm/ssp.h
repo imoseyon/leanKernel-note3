@@ -60,7 +60,13 @@
 #define ERROR		-1
 
 #define FACTORY_DATA_MAX	100
-#undef SAVE_MAG_LOG	/* Magnetic sensor data logging flag */
+#undef SAVE_MAG_LOG/* Magnetic sensor data logging flag */
+
+#ifdef SAVE_MAG_LOG/*normal mode = 0, logging mode = 1*/
+#define MAG_LOG_MODE 1
+#else
+#define MAG_LOG_MODE 0
+#endif
 
 #if SSP_DBG
 #define SSP_FUNC_DBG 1
@@ -152,7 +158,7 @@ enum {
 #define GYROSCOPE_DPS2000		2000
 
 /* Gesture Sensor Current */
-#define DEFUALT_IR_CURRENT    100 //0xF0
+#define DEFUALT_IR_CURRENT    100
 
 /* kernel -> ssp manager cmd*/
 #define SSP_LIBRARY_SLEEP_CMD		(1 << 5)
@@ -169,9 +175,9 @@ enum {
 #define MSG2SSP_INST_LIB_NOTI			0xB4
 #define MSG2SSP_INST_LIB_DATA                   0xC1
 
-#define MSG2SSP_AP_STT				0xC8
 #define MSG2SSP_AP_MCU_SET_GYRO_CAL		0xCD
 #define MSG2SSP_AP_MCU_SET_ACCEL_CAL		0xCE
+#define MSG2SSP_AP_STATUS_SHUTDOWN		0xD0
 #define MSG2SSP_AP_STATUS_WAKEUP		0xD1
 #define MSG2SSP_AP_STATUS_SLEEP			0xD2
 #define MSG2SSP_AP_STATUS_RESUME		0xD3
@@ -181,7 +187,7 @@ enum {
 #define MSG2SSP_AP_STATUS_POW_DISCONNECTED	0xD7
 #define MSG2SSP_AP_TEMPHUMIDITY_CAL_DONE	0xDA
 #define MSG2SSP_AP_MCU_SET_DUMPMODE		0xDB
-#define MSG2SSP_AP_MCU_DUMP_FINISH		0xDC
+#define MSG2SSP_AP_MCU_DUMP_CHECK		0xDC
 #define MSG2SSP_AP_MCU_BATCH_FLUSH		0xDD
 #define MSG2SSP_AP_MCU_BATCH_COUNT		0xDF
 
@@ -296,14 +302,11 @@ enum {
 	GAME_ROTATION_VECTOR = 15,
 	ROTATION_VECTOR,
 	STEP_COUNTER,
+	BIO_HRM_RAW,
+	BIO_HRM_RAW_FAC,
+	BIO_HRM_LIB,
 	SENSOR_MAX,
 };
-
-#define SSP_BYPASS_SENSORS_EN_ALL (1 << ACCELEROMETER_SENSOR |\
-	1 << GYROSCOPE_SENSOR | 1 << GEOMAGNETIC_UNCALIB_SENSOR |\
-	1 << GEOMAGNETIC_SENSOR | 1 << PRESSURE_SENSOR |\
-	1 << TEMPERATURE_HUMIDITY_SENSOR | 1 << LIGHT_SENSOR|\
-	1 << GYRO_UNCALIB_SENSOR | 1 << GAME_ROTATION_VECTOR) /* PROXIMITY_SENSOR is not continuos */
 	
 struct meta_data_event {
 	s32 what;
@@ -354,8 +357,13 @@ struct sensor_value {
 		u8 step_det;
 		u8 sig_motion;
 		u32 step_diff;
+#if defined (CONFIG_SENSORS_SSP_MAX88921)
+		u16 prox[4];
+		s16 data[19];
+#else
 		u8 prox[4];
 		u8 data[20];
+#endif
 		s32 pressure[3];
 		struct meta_data_event meta_data;
 #ifdef SAVE_MAG_LOG
@@ -367,7 +375,7 @@ struct sensor_value {
 
 extern struct class *sensors_event_class;
 extern int poweroff_charging;
-extern int recovery_mode;
+extern int boot_mode_recovery;
 
 struct calibraion_data {
 	s16 x;
@@ -390,6 +398,23 @@ struct hw_offset_data {
 #define SSP_SPI_MASK		(3 << SSP_SPI)	/* read write mask */
 #define SSP_GYRO_DPS_MASK	(3 << SSP_GYRO_DPS)
 #define SSP_INDEX_MASK		(8191 << SSP_INDEX)	/* dump index mask. Index is up to 8191 */
+
+/* proximity sensor threshold */
+#if defined(CONFIG_SEC_KACTIVE_PROJECT)
+#define DEFUALT_HIGH_THRESHOLD	110
+#define DEFUALT_LOW_THRESHOLD	85
+#define TBD_HIGH_THRESHOLD	110
+#define TBD_LOW_THRESHOLD	85
+#define WHITE_HIGH_THRESHOLD	110
+#define WHITE_LOW_THRESHOLD	85
+#else
+#define DEFUALT_HIGH_THRESHOLD	130
+#define DEFUALT_LOW_THRESHOLD	90
+#define TBD_HIGH_THRESHOLD	130
+#define TBD_LOW_THRESHOLD	90
+#define WHITE_HIGH_THRESHOLD	130
+#define WHITE_LOW_THRESHOLD	90
+#endif
 
 struct ssp_msg {
 	u8 cmd;
@@ -431,12 +456,13 @@ struct ssp_data {
 	struct iio_dev *rot_indio_dev;
 	struct iio_dev *game_rot_indio_dev;
 	struct iio_dev *step_det_indio_dev;
+	struct iio_dev *pressure_indio_dev;
 	struct iio_trigger *accel_trig;
 	struct iio_trigger *gyro_trig;
 	struct iio_trigger *rot_trig;
 	struct iio_trigger *game_rot_trig;
 	struct iio_trigger *step_det_trig;
-	struct input_dev *pressure_input_dev;
+	struct iio_trigger *pressure_det_trig;
 	struct input_dev *light_input_dev;
 	struct input_dev *prox_input_dev;
 	struct input_dev *temp_humi_input_dev;
@@ -471,6 +497,7 @@ struct ssp_data {
 	struct device *ges_device;
 	struct device *temphumidity_device;
 	struct delayed_work work_firmware;
+	struct delayed_work work_refresh;
 	struct miscdevice shtc1_device;
 	struct miscdevice batch_io_device;
 
@@ -490,6 +517,8 @@ struct ssp_data {
 	bool bTimeSyncing;
 
 	unsigned int uProxCanc;
+	unsigned int uCrosstalk;
+	unsigned int uProxCalResult;
 	unsigned int uProxHiThresh;
 	unsigned int uProxLoThresh;
 	unsigned int uProxHiThresh_default;
@@ -503,15 +532,13 @@ struct ssp_data {
 	int iLibraryLength;
 	int aiCheckStatus[SENSOR_MAX];
 
-	unsigned int uIrqFailCnt;
-	unsigned int uSsdFailCnt;
+	unsigned int uComFailCnt;
 	unsigned int uResetCnt;
-	unsigned int uInstFailCnt;
 	unsigned int uTimeOutCnt;
 	unsigned int uIrqCnt;
-	unsigned int uMissSensorCnt;
 	unsigned int uDumpCnt;
 
+	int sealevelpressure;
 	unsigned int uGyroDps;
 	unsigned int uSensorState;
 	unsigned int uCurFirmRev;
@@ -520,6 +547,7 @@ struct ssp_data {
 	char uLastAPState;
 	s32 iPressureCal;
 	u64 step_count_total;
+
 	atomic_t aSensorEnable;
 	int64_t adDelayBuf[SENSOR_MAX];
 	s32 batchLatencyBuf[SENSOR_MAX];
@@ -566,9 +594,12 @@ struct ssp_data {
 	int ap_int;
 	int rst;
 	int chg;
-	int vzw_prox_gpio;
 	struct regulator *reg_hub;
 	struct regulator *reg_sns;
+	u8 regulator_is_enable;
+
+	const char *ges_vdd;
+	const char *ges_led;
 
 	struct list_head pending_list;
 	void (*ssp_big_task[BIG_TYPE_MAX])(struct work_struct *);

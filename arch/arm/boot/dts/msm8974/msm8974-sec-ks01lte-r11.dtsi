@@ -23,6 +23,9 @@
 
 &soc {
 	qcom,ion {
+		qcom,ion-heap@16 { /* Camera*/
+			qcom,memory-reservation-size = <0x0>;
+		};
 		qcom,ion-heap@28 { /* AUDIO HEAP */
 			qcom,memory-reservation-size = <0x314000>;
 		};
@@ -104,7 +107,6 @@
 	qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "dsi";
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* 32 MB allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1F40000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
 			qcom,memblock-reserve = <0x03200000 0x01F00000>;
 		};
@@ -219,7 +221,7 @@
 			battery,ovp_uvlo_check_type = <3>; /* SEC_BATTERY_OVP_UVLO_CHGPOLLING */
 			battery,full_check_type = <7>; /* SEC_BATTERY_FULLCHARGED_CHGPSY */
 
-			battery,input_current_limit = <0 0 0 1900 460 460 1000 460 0 1700 650 0 1900 0 1300 400 700 1300 300 1000 1800 460 460>;
+			battery,input_current_limit = <0 0 0 1900 460 460 1000 460 0 1700 650 0 1900 460 1300 400 700 1300 300 1000 1800 460 460>;
 			battery,fast_charging_current = <0 0 0 1600 460 460 1000 460 0 1600 750 0 1600 0 1300 400 700 1300 300 1000 2100 0 0>;
 			battery,full_check_current_1st = <0 0 0 200 200 200 200 200 0 200 200 0 200 0 200 200 200 200 200 200 200 0 0>;
 			battery,full_check_current_2nd = <0 0 0 2400 2400 2400 2400 2400 0 2400 2400 0 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
@@ -328,6 +330,8 @@
 			reg = <0x20>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <80 0>;
+			qcom,noise-rjct-scl = <1>;
+			qcom,noise-rjct-sda = <1>;
 			synaptics,tsppwr_en = <&pm8941_gpios 9 0x1>;
 			synaptics,irq-gpio = <&msmgpio 80 0x00>;
 			synaptics,i2c-pull-up = <1>;
@@ -398,41 +402,7 @@
 	sound {
 		qcom,model = "msm8974-taiko-cdp-snd-card";
 		qcom,hdmi-audio-rx;
-		qcom,micbias-en-msm-gpio = <&pm8941_gpios 33 0>;
-
-		qcom,audio-routing =
-			"RX_BIAS", "MCLK",
-			"LDO_H", "MCLK",
-			"AIF4 MAD", "MCLK",
-			"AMIC1", "MIC BIAS1 External",
-			"MIC BIAS1 External", "Main Mic",
-			"AMIC2", "MIC BIAS2 External",
-			"MIC BIAS2 External", "Headset Mic",
-			"AMIC3", "MIC BIAS3 External",
-			"MIC BIAS3 External", "Sub Mic",
-			"AMIC4", "MIC BIAS4 External",
-			"MIC BIAS4 External", "Third Mic",
-			"DMIC1", "MIC BIAS1 External",
-			"MIC BIAS1 External", "Digital Mic1",
-			"DMIC2", "MIC BIAS1 External",
-			"MIC BIAS1 External", "Digital Mic2",
-			"DMIC3", "MIC BIAS3 External",
-			"MIC BIAS3 External", "Digital Mic3",
-			"DMIC4", "MIC BIAS3 External",
-			"MIC BIAS3 External", "Digital Mic4",
-			"DMIC5", "MIC BIAS4 External",
-			"MIC BIAS4 External", "Digital Mic5",
-			"DMIC6", "MIC BIAS4 External",
-			"MIC BIAS4 External", "Digital Mic6";
-	};
-
-	usb2_otg_sw: regulator-tpd4s214 {
-		compatible = "regulator-fixed";
-		regulator-name = "usb2_otg_sw";
-		gpio = <&pm8941_gpios 18 0>;
-		parent-supply = <&pm8941_boost>;
-		startup-delay-us = <17000>;
-		enable-active-high;
+		qcom,cdc-micbias2-headset-only;
 	};
 
 	hsic_host: hsic@f9a00000 {
@@ -761,6 +731,7 @@
 	};
 
 	gpio@c500 { /* GPIO 6 */
+                qcom,vin-sel = <2>;
 	};
 
 	gpio@c600 { /* GPIO 7 */
@@ -798,6 +769,10 @@
 	};
 
 	gpio@cc00 { /* GPIO 13 */
+		qcom,mode = <1>;
+		qcom,pull = <2>;
+		qcom,vin-sel = <2>;
+		qcom,src-sel = <0>;
 	};
 
 	gpio@cd00 { /* GPIO 14 */
@@ -1081,7 +1056,7 @@
 	taiko_codec {
 		qcom,cdc-reset-gpio = <&msmgpio 63 0>;
 		qcom,cdc-micbias1-ext-cap;
-		qcom,cdc-micbias2-ext-cap;
+//		qcom,cdc-micbias2-ext-cap;
 		qcom,cdc-micbias3-ext-cap;
 		qcom,cdc-micbias4-ext-cap;
 
@@ -1111,6 +1086,3 @@
 	};
 };
 
-&pm8941_l22 {
-	regulator-always-on;
-};

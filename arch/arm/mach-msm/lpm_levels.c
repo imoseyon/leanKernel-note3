@@ -26,6 +26,7 @@
 #include <linux/suspend.h>
 #include <linux/pm_qos.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 #include <mach/mpm.h>
 #include <mach/cpuidle.h>
 #include <mach/event_timer.h>
@@ -308,7 +309,7 @@ static int lpm_system_mode_select(
 			system_level->num_cpu_votes != num_powered_cores)
 			continue;
 
-		if (latency_us < pwr_param->latency_us)
+		if (latency_us < pwr_param->latency_us && from_idle)
 			continue;
 
 		if (sleep_us < pwr_param->time_overhead_us)
@@ -359,12 +360,13 @@ static void lpm_system_prepare(struct lpm_system_state *system_state,
 	const struct cpumask *nextcpu;
 
 	spin_lock(&system_state->sync_lock);
-#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO)
+#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO) || defined(CONFIG_ARCH_MSM8226)
 	if (index < 0 || num_powered_cores != system_state->num_cores_in_sync)
 #else
 	if (num_powered_cores != system_state->num_cores_in_sync)
 #endif
 	{
+		lpm_set_l2_mode(system_state, default_l2_mode);
 		spin_unlock(&system_state->sync_lock);
 		return;
 	}
@@ -379,6 +381,9 @@ static void lpm_system_prepare(struct lpm_system_state *system_state,
 	}
 
 	lvl = &system_state->system_level[index];
+
+	if(lvl->l2_mode==MSM_SPM_L2_MODE_GDHS)
+		lvl->notify_rpm = false;
 
 	ret = lpm_set_l2_mode(system_state, lvl->l2_mode);
 
@@ -441,7 +446,7 @@ static void lpm_system_unprepare(struct lpm_system_state *system_state,
 			system_lvl->num_cpu_votes--;
 	}
 
-#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO)
+#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO) || defined(CONFIG_ARCH_MSM8226)
 	if (!first_core_up || index < 0)
 #else
 	if (!first_core_up)
@@ -458,7 +463,7 @@ static void lpm_system_unprepare(struct lpm_system_state *system_state,
 		msm_mpm_exit_sleep(from_idle);
 	}
 unlock_and_return:
-#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO)
+#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO) || defined(CONFIG_ARCH_MSM8226)
 	system_state->last_entered_cluster_index = -1;
 #endif
 	spin_unlock(&system_state->sync_lock);
@@ -759,7 +764,7 @@ static void lpm_enter_low_power(struct lpm_system_state *system_state,
 
 	idx = lpm_system_select(system_state, cpu_index, from_idle);
 
-#if !(defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO))
+#if !(defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO) || defined(CONFIG_ARCH_MSM8226))
 	if (idx >= 0)
 #endif
 	{
@@ -826,6 +831,15 @@ static int lpm_suspend_prepare(void)
 	msm_mpm_suspend_prepare();
 	regulator_showall_enabled();
 
+/* Temporary fix for RUBEN LTE for configuring GPIO 33 to NC configuration
+before entering sleep as some other process is changing it*/
+#if defined (CONFIG_MACH_RUBENSLTE_OPEN)
+	if (gpio_is_valid(33)) {
+		gpio_tlmm_config(GPIO_CFG(33, 0,
+			GPIO_CFG_INPUT,GPIO_CFG_PULL_DOWN,GPIO_CFG_2MA),
+			GPIO_CFG_ENABLE);
+	}
+#endif
 #ifdef CONFIG_SEC_GPIO_DVS
 	/************************ Caution !!! ****************************
 	 * This functiongit a must be located in appropriate SLEEP position
@@ -1037,11 +1051,14 @@ static int lpm_system_probe(struct platform_device *pdev)
 					__func__);
 			goto fail;
 		}
-
+#if !(defined(CONFIG_ARCH_MSM8226))
 		if (l->l2_mode == MSM_SPM_L2_MODE_GDHS ||
 				l->l2_mode == MSM_SPM_L2_MODE_POWER_COLLAPSE)
 			l->notify_rpm = true;
-
+#else
+		key = "qcom,send-rpm-sleep-set";
+		l->notify_rpm = of_property_read_bool(node, key);
+#endif
 		if (l->l2_mode >= MSM_SPM_L2_MODE_GDHS)
 			l->sync = true;
 
@@ -1082,7 +1099,7 @@ static int lpm_system_probe(struct platform_device *pdev)
 	}
 	sys_state.system_level = level;
 	sys_state.num_system_levels = num_levels;
-#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO)
+#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO) || defined(CONFIG_ARCH_MSM8226)
 	sys_state.last_entered_cluster_index = -1;
 #endif
 	return ret;

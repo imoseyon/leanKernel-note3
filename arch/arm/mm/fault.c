@@ -211,7 +211,6 @@ inline void tima_verify_state(unsigned long pmdp, unsigned long val, unsigned lo
         }
 }
 
-static DEFINE_RAW_SPINLOCK(par_lock);
 #ifdef CONFIG_TIMA_RKP_DEBUG
 /* 
  * Function decides what the response to 
@@ -353,6 +352,33 @@ int tima_debug_page_protection(unsigned long va, unsigned long caller, unsigned 
  * return: -1 error, 0 writable, 1 readonly
  */
 extern unsigned long tima_switch_count;
+#ifdef	CONFIG_TIMA_RKP_30
+extern unsigned long pgt_bit_array[];
+int tima_is_pg_protected(unsigned long va)
+{
+        unsigned long paddr = __pa(va);
+        unsigned long index = paddr >> PAGE_SHIFT;
+        unsigned long *p = (unsigned long *)pgt_bit_array;
+        unsigned long tmp = index>>5;
+        unsigned long rindex;
+        unsigned long val;
+
+        if(!p)
+                return -1;
+        p += (tmp);
+#ifndef	CONFIG_TIMA_RKP_COHERENT_TT
+	asm volatile("mcr     p15, 0, %0, c7, c6, 1\n"
+	"dsb\n"
+	"isb\n"
+	: : "r" (p));
+#endif
+        rindex = index % 32;
+
+        val = (*p) & (1 << rindex)?1:0;
+        return val;
+}
+#else
+static DEFINE_RAW_SPINLOCK(par_lock);
 int tima_is_pg_protected(unsigned long va)
 {
 	unsigned long  par;
@@ -375,6 +401,8 @@ int tima_is_pg_protected(unsigned long va)
 
 	return 0;
 }
+#endif	/* CONFIG_TIMA_RKP_30 */
+EXPORT_SYMBOL(tima_is_pg_protected);
 #endif
 
 #ifdef	CONFIG_TIMA_RKP
@@ -430,7 +458,6 @@ static unsigned int rkp_fixup(unsigned long addr, struct pt_regs *regs) {
 }
 #endif
 
-
 /*
  * Oops.  The kernel tried to access some page that wasn't present.
  */
@@ -449,7 +476,7 @@ __do_kernel_fault(struct mm_struct *mm, unsigned long addr, unsigned int fsr,
 			return;
 		}
 	}
-#endif	
+#endif
 
 	/*
 	 * No handler, we'll have to terminate things with extreme prejudice.

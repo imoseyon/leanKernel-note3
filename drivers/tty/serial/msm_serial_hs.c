@@ -515,6 +515,25 @@ static inline void msm_hs_write(struct uart_port *uport, unsigned int index,
 	writel_relaxed(value, uport->membase + offset);
 }
 
+static int sps_rx_disconnect(struct sps_pipe *sps_pipe_handler)
+{
+	struct sps_connect config;
+	int ret;
+
+	ret = sps_get_config(sps_pipe_handler, &config);
+	if (ret) {
+		pr_err("%s: sps_get_config() failed ret %d\n", __func__, ret);
+		return ret;
+	}
+	config.options |= SPS_O_POLL;
+	ret = sps_set_config(sps_pipe_handler, &config);
+	if (ret) {
+		pr_err("%s: sps_set_config() failed ret %d\n", __func__, ret);
+		return ret;
+	}
+	return sps_disconnect(sps_pipe_handler);
+}
+
 static void msm_hs_release_port(struct uart_port *port)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(port);
@@ -1126,7 +1145,7 @@ static void msm_hs_set_termios(struct uart_port *uport,
 					RX_FLUSH_COMPLETE_TIMEOUT);
 			tasklet_kill(&msm_uport->tx.tlet);
 			tasklet_kill(&msm_uport->rx.tlet);
-			ret = sps_disconnect(sps_pipe_handle);
+			ret = sps_rx_disconnect(sps_pipe_handle);
 			if (ret)
 				pr_err("%s(): sps_disconnect failed\n",
 							__func__);
@@ -1208,7 +1227,7 @@ static void hsuart_disconnect_rx_endpoint_work(struct work_struct *w)
 	struct sps_pipe *sps_pipe_handle = rx->prod.pipe_handle;
 	int ret = 0;
 
-	ret = sps_disconnect(sps_pipe_handle);
+	ret = sps_rx_disconnect(sps_pipe_handle);
 	if (ret)
 		pr_err("%s(): sps_disconnect failed\n", __func__);
 
@@ -1426,6 +1445,7 @@ static void flip_insert_work(struct work_struct *work)
 		if (hs_serial_debug_mask)
 			printk(KERN_ERR "Error: No buffer pending in %s",
 			       __func__);
+		spin_unlock_irqrestore(&msm_uport->uport.lock, flags);
 		return;
 	}
 	if (msm_uport->rx.buffer_pending & FIFO_OVERRUN) {
@@ -2566,7 +2586,7 @@ free_wake_irq:
 		irq_set_irq_wake(msm_uport->wakeup.irq, 0);
 sps_disconnect_rx:
 	if (is_blsp_uart(msm_uport))
-		sps_disconnect(sps_pipe_handle_rx);
+		sps_rx_disconnect(sps_pipe_handle_rx);
 sps_disconnect_tx:
 	if (is_blsp_uart(msm_uport))
 		sps_disconnect(sps_pipe_handle_tx);

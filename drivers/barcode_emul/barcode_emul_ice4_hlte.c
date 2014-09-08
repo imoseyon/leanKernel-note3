@@ -49,6 +49,8 @@
 #include "barcode_emul_ice4_hlte.h"
 #include <linux/err.h>
 
+#define US_TO_PATTERN		1000000
+
 #if defined(CONFIG_MACH_H3GDUOS)
 #include <mach/gpiomux.h>
 #endif
@@ -127,7 +129,8 @@ static struct i2c_client *g_client;
 #if defined(CONFIG_MACH_HLTESKT)||defined(CONFIG_MACH_HLTEKTT)||defined(CONFIG_MACH_HLTELGT)\
 	|| defined(CONFIG_MACH_FLTESKT) || defined(CONFIG_MACH_LT03SKT) || defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_LT03KTT)\
 	|| defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM) \
-	|| defined(CONFIG_MACH_H3GDUOS_CTC) || defined(CONFIG_MACH_H3GDUOS_CU)
+	|| defined(CONFIG_MACH_H3GDUOS_CTC) || defined(CONFIG_MACH_H3GDUOS_CU) || defined(CONFIG_MACH_HLTE_CHN_CMCC) \
+	|| defined(CONFIG_SEC_LOCALE_KOR_FRESCO)
 bool fw_dl_complete;
 #else
 static bool fw_dl_complete;
@@ -193,7 +196,7 @@ static int ice4_clock_en(int onoff)
 #if defined(CONFIG_MACH_H3GDUOS)
      if (onoff) {
 		int rc = 0;
-		
+
 		//msm_tlmm_misc_reg_write(TLMM_SPARE_REG, 0x1);
 		rc = gpio_request(GPIO_FPGA_MAIN_CLK, "fpga_main_clk");
 
@@ -208,13 +211,13 @@ static int ice4_clock_en(int onoff)
      } else {
 		//msm_tlmm_misc_reg_write(TLMM_SPARE_REG, 0x5);
 		gpio_free(GPIO_FPGA_MAIN_CLK);
-     }  
+     }
 
       if (!fpga_main_src_clk){
-      	fpga_main_src_clk = clk_get(NULL, "gp1_src_clk");
+	fpga_main_src_clk = clk_get(NULL, "gp1_src_clk");
       }
       if (IS_ERR(fpga_main_src_clk)) {
-      	pr_err( "%s: unable to get fpga_main_src_clk\n", __func__);
+	pr_err( "%s: unable to get fpga_main_src_clk\n", __func__);
       }
       
       if (!fpga_main_clk){
@@ -325,7 +328,7 @@ static void barcode_gpio_config(void)
 		GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 #if !defined(CONFIG_MACH_H3GDUOS)
 	gpio_tlmm_config(GPIO_CFG(GPIO_FPGA_MAIN_CLK, \
-		2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);	
+		2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
 #endif
 
 	gpio_request(g_pdata->cresetb, "irda_creset");
@@ -344,7 +347,8 @@ static void barcode_gpio_config(void)
 }
 #if defined(CONFIG_MACH_HLTESKT) || defined(CONFIG_MACH_HLTEKTT) || defined(CONFIG_MACH_HLTELGT)\
 	|| defined(CONFIG_MACH_FLTESKT) || defined(CONFIG_MACH_LT03SKT) || defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_LT03KTT)\
-	|| defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM)
+	|| defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM)\
+	|| defined(CONFIG_SEC_LOCALE_KOR_FRESCO)
 static void barcode_gpio_reconfig(void)
 {
 	pr_info("%s\n", __func__);
@@ -427,8 +431,7 @@ static int barcode_fpga_fimrware_update_start(const u8 *data, int len)
 		udelay(5);
 		pr_barcode("FPGA firmware update success\n");
 		fw_dl_complete = true;
-		break;		
-		
+		break;
 	} while (retry);
 	fpga_enable(0,0);
 	return 0;
@@ -438,7 +441,8 @@ void ice4_fpga_firmware_update_hlte(void)
 {
 #if defined(CONFIG_MACH_HLTESKT) || defined(CONFIG_MACH_HLTEKTT) || defined(CONFIG_MACH_HLTELGT)\
 	|| defined(CONFIG_MACH_FLTESKT) || defined(CONFIG_MACH_LT03SKT) || defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_LT03KTT)\
-	|| defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM)
+	|| defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM)\
+	|| defined(CONFIG_SEC_LOCALE_KOR_FRESCO)
 	barcode_gpio_reconfig();
 #endif
 	if (g_pdata->fw_type == ICE_I2C_2) {
@@ -457,16 +461,25 @@ void ice4_fpga_firmware_update_hlte(void)
 	//verification with dummy gpio
 #if defined(CONFIG_MACH_HLTESKT) || defined(CONFIG_MACH_HLTEKTT) || defined(CONFIG_MACH_HLTELGT)\
 	|| defined(CONFIG_MACH_FLTESKT) || defined(CONFIG_MACH_LT03SKT) || defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_LT03KTT)\
-	|| defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM)
+	|| defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM)\
+	|| defined(CONFIG_SEC_LOCALE_KOR_FRESCO)
 	gpio_tlmm_config(GPIO_CFG(g_pdata->spi_si, 0,
 		GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 	gpio_tlmm_config(GPIO_CFG(g_pdata->spi_clk, 0,
 		GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA), 1);
 #else
+#if defined(CONFIG_MACH_MONDRIAN)
+	pr_info("%s : mondrian\n", __func__);
+	gpio_tlmm_config(GPIO_CFG(g_pdata->spi_si, 0,
+		GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), 1);
+	gpio_tlmm_config(GPIO_CFG(g_pdata->spi_clk, 0,
+		GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), 1);
+#else
 	gpio_tlmm_config(GPIO_CFG(g_pdata->spi_si, 0,
 		GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 	gpio_tlmm_config(GPIO_CFG(g_pdata->spi_clk, 0,
 		GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
+#endif
 #endif
 	usleep_range(10000, 12000);
 	
@@ -980,8 +993,8 @@ static ssize_t remocon_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
 	struct barcode_emul_data *data = dev_get_drvdata(dev);
-	unsigned int _data;
-	int count, i;
+	unsigned int _data, _tdata;
+	int count, i, converting_factor = 1;
 
 	pr_barcode("ir_send called\n");
 
@@ -991,6 +1004,7 @@ static ssize_t remocon_store(struct device *dev, struct device_attribute *attr,
 				break;
 			if (data->count == 2) {
 				data->ir_freq = _data;
+				converting_factor = US_TO_PATTERN / data->ir_freq;
 				if (data->on_off) {
 				//	msleep(30);
 				} else {
@@ -1005,12 +1019,13 @@ static ssize_t remocon_store(struct device *dev, struct device_attribute *attr,
 								= _data & 0xFF;
 				data->count += 3;
 			} else {
-				data->ir_sum += _data;
+				_tdata = _data / converting_factor;
+				data->ir_sum += _tdata;
 				count = data->count;
 				data->i2c_block_transfer.data[count]
-								= _data >> 8;
+								= _tdata >> 8;
 				data->i2c_block_transfer.data[count+1]
-								= _data & 0xFF;
+								= _tdata & 0xFF;
 				data->count += 2;
 			}
 
@@ -1220,9 +1235,10 @@ static int __devinit barcode_emul_probe(struct i2c_client *client,
 	} else
 		pdata = client->dev.platform_data;
 
-#if !defined(CONFIG_MACH_VIENNAEUR) && !defined(CONFIG_MACH_LT03EUR)\
+#if !defined(CONFIG_MACH_VIENNAEUR) && !defined(CONFIG_MACH_VIENNAKOR) && !defined(CONFIG_MACH_LT03EUR)\
 	&& !defined(CONFIG_MACH_LT03SKT) && !defined(CONFIG_MACH_LT03KTT)\
-	&& !defined(CONFIG_MACH_LT03LGT) && !defined(CONFIG_MACH_V2)
+	&& !defined(CONFIG_MACH_LT03LGT) && !defined(CONFIG_MACH_V2)\
+	&& !defined(CONFIG_MACH_CHAGALL) && !defined(CONFIG_MACH_KLIMT)
 	if(system_rev < BOARD_REV02)
 		pdata->fw_type = ICE_I2C_2;
 

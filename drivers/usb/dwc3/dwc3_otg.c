@@ -896,6 +896,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dotg->vbus_retry_count = 0;
 			work = 1;
 		} else {
+			pm_runtime_get_noresume(phy->dev);
 			phy->state = OTG_STATE_A_HOST;
 			ret = dwc3_otg_start_host(&dotg->otg, 1);
 			if ((ret == -EPROBE_DEFER) &&
@@ -904,6 +905,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 				 * Get regulator failed as regulator driver is
 				 * not up yet. Will try to start host after 1sec
 				 */
+				pm_runtime_put_noidle(phy->dev);
 				phy->state = OTG_STATE_A_IDLE;
 				dev_dbg(phy->dev, "Unable to get vbus regulator. Retrying...\n");
 				delay = VBUS_REG_CHECK_DELAY;
@@ -914,6 +916,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 				 * Probably set_host was not called yet.
 				 * We will re-try as soon as it will be called
 				 */
+				pm_runtime_put_noidle(phy->dev);
 				dev_dbg(phy->dev, "enter lpm as\n"
 					"unable to start A-device\n");
 				phy->state = OTG_STATE_A_IDLE;
@@ -930,6 +933,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			phy->state = OTG_STATE_B_IDLE;
 			dotg->vbus_retry_count = 0;
 			work = 1;
+			pm_runtime_put_noidle(phy->dev);
 		}
 		break;
 

@@ -12,6 +12,8 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/bootmem.h>
+#include <linux/memblock.h>
 
 #include "mdss_mdp.h"
 #include "mdss_panel.h"
@@ -53,6 +55,9 @@ struct mdss_mdp_cmd_ctx {
 	int rdptr_enabled;
 	struct mutex clk_mtx;
 	spinlock_t clk_lock;
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+	spinlock_t te_lock;
+#endif
 	struct work_struct clk_work;
 	struct work_struct pp_done_work;
 	atomic_t pp_done_cnt;
@@ -154,7 +159,11 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_SYNC_THRESH,
 		   (CONTINUE_THRESHOLD << 16) | (ctx->start_threshold));
 
-	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_TEAR_CHECK_EN, enable);
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6E3HA1_PT_PANEL)
+	if (board_rev)
+#endif
+		mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_TEAR_CHECK_EN, enable);
+
 	return 0;
 }
 
@@ -216,6 +225,12 @@ static inline void mdss_mdp_cmd_clk_on(struct mdss_mdp_cmd_ctx *ctx)
 {
 	unsigned long flags;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	if (!ctx->panel_on) {
+		pr_info("%s: Ignore clock on because the unblank does not finished\n", __func__);
+		return;
+	}
+
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
 	xlog(__func__, ctx->panel_ndx, ctx->koff_cnt, ctx->clk_enabled, ctx->rdptr_enabled, 0, 0);
 #endif
@@ -260,14 +275,31 @@ int	dynamic_fps_use_te_ctrl_value;
 #endif
 #if defined(CONFIG_LCD_HMT)
 int skip_te_enable = 0;
-static unsigned int te_count = 0;
+static unsigned int skip_te = 0;
 #endif
+
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+int te;
+int te_cnt;
+int te_set_done;
+struct completion te_check_comp;
+int get_lcd_ldi_info(void);
+#endif
+
 static void mdss_mdp_cmd_readptr_done(void *arg)
 {
 	struct mdss_mdp_ctl *ctl = arg;
 	struct mdss_mdp_cmd_ctx *ctx = ctl->priv_data;
 	struct mdss_mdp_vsync_handler *tmp;
 	ktime_t vsync_time;
+
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+	static ktime_t vsync_time1;
+	static ktime_t vsync_time2;
+	static int i = 0;
+	static int time1 = 0, time2 = 0;
+#endif
+
 #if defined(DYNAMIC_FPS_USE_TE_CTRL)
 	if(dynamic_fps_use_te_ctrl)
 	{
@@ -286,20 +318,52 @@ static void mdss_mdp_cmd_readptr_done(void *arg)
 	}
 
 #if defined(CONFIG_LCD_HMT)
-	if(skip_te_enable) {
-		if(te_count % 2 == 1) {
-			pr_debug("%s : Accept TE Signal \n",__func__);
-			te_count++;
-		} else {
+	if (skip_te_enable) {
+		if (skip_te) {
 			pr_debug("%s : Skip TE Signal \n",__func__);
-			te_count++;
-			goto end;
+			skip_te = 0;
+			return;
 		}
+		skip_te = 1;
 	}
 #endif
 
 	vsync_time = ktime_get();
 	ctl->vsync_cnt++;
+
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+	if (get_lcd_ldi_info()) {
+		if (te_set_done == TE_SET_START) {
+
+			pr_debug("%s : TE_SET_START...",__func__);
+
+			if (i % 2 == 0) {
+				vsync_time1 = ktime_get();
+				time1 = (int)ktime_to_us(vsync_time1);
+				te = time1 && time2 ? time1 - time2 : 0;
+				pr_debug("[%s] : ktime = %d\n",__func__, te);
+			} else {
+				vsync_time2 = ktime_get();
+				time2 = (int)ktime_to_us(vsync_time2);
+				te = time1 && time2 ? time2 - time1 : 0;
+				pr_debug("[%s] : ktime = %d\n",__func__, te);
+			}
+			i++;
+
+			pr_debug("[%s] TE = %d\n",__func__, te);
+
+			spin_lock(&ctx->te_lock);
+			te_cnt++;
+			if (te_cnt >= 2) { // check TE using only two signal..
+				pr_debug(">>>> te_check_comp COMPLETE (%d) <<<< \n", te_cnt);
+				complete(&te_check_comp);
+			}
+			spin_unlock(&ctx->te_lock);
+		} else {
+			pr_debug("%s : not TE_SET_START...",__func__);
+		}
+	}
+#endif
 
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
 	xlog(__func__,ctl->num, ctx->koff_cnt, ctx->clk_enabled, ctx->rdptr_enabled, 0, 0x88888);
@@ -317,6 +381,10 @@ static void mdss_mdp_cmd_readptr_done(void *arg)
 	}
 
 	if (ctx->rdptr_enabled == 0) {
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+		if (get_lcd_ldi_info())
+			if (te_set_done == TE_SET_DONE || te_set_done == TE_SET_FAIL)
+#endif
 		mdss_mdp_irq_disable_nosync
 			(MDSS_MDP_IRQ_PING_PONG_RD_PTR, ctx->pp_num);
 		complete(&ctx->stop_comp);
@@ -324,12 +392,6 @@ static void mdss_mdp_cmd_readptr_done(void *arg)
 	}
 
 	spin_unlock(&ctx->clk_lock);
-
-#if defined(CONFIG_LCD_HMT)
-end:
-	pr_debug("%s : TE = %d \n",__func__, te_count);
-#endif
-
 }
 
 static void mdss_mdp_cmd_underflow_recovery(void *data)
@@ -356,6 +418,31 @@ static void mdss_mdp_cmd_underflow_recovery(void *data)
 	}
 	spin_unlock_irqrestore(&ctx->clk_lock, flags);
 }
+#if 0
+static void mdss_mdp_cmd_pingpong_recovery(struct mdss_mdp_cmd_ctx *ctx)
+{
+	unsigned long flags;
+
+	if (!ctx) {
+		pr_err("%s: invalid ctx\n", __func__);
+		return;
+	}
+
+	if (!ctx->ctl)
+		return;
+	spin_lock_irqsave(&ctx->clk_lock, flags);
+	if (ctx->koff_cnt) {
+		mdss_mdp_ctl_reset(ctx->ctl);
+		pr_debug("%s: intf_num=%d\n", __func__,
+					ctx->ctl->intf_num);
+		ctx->koff_cnt--;
+		mdss_mdp_irq_disable_nosync(MDSS_MDP_IRQ_PING_PONG_COMP,
+						ctx->pp_num);
+		complete_all(&ctx->pp_comp);
+	}
+	spin_unlock_irqrestore(&ctx->clk_lock, flags);
+}
+#endif
 
 static void mdss_mdp_cmd_pingpong_done(void *arg)
 {
@@ -381,7 +468,7 @@ static void mdss_mdp_cmd_pingpong_done(void *arg)
 
 	complete_all(&ctx->pp_comp);
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctl->num, ctx->koff_cnt, ctx->clk_enabled, ctx->rdptr_enabled, 0, 0);
+	xlog(__func__, ctl->num, ctx->koff_cnt, ctx->clk_enabled, ctx->rdptr_enabled, ctl->roi_bkup.w, ctl->roi_bkup.h);
 #endif
 
 	if (ctx->koff_cnt) {
@@ -483,12 +570,11 @@ static int mdss_mdp_cmd_remove_vsync_handler(struct mdss_mdp_ctl *ctl,
 	if (handle->enabled) {
 		handle->enabled = false;
 		list_del_init(&handle->list);
-
 		if (!handle->cmd_post_flush) {
 			if (ctx->vsync_enabled)
 				ctx->vsync_enabled--;
 			else
-				WARN(1, "unbalanced vsync disable");
+				WARN(1, "Unbalanced vsync disable");
 		}
 	}
 	spin_unlock_irqrestore(&ctx->clk_lock, flags);
@@ -503,12 +589,19 @@ int mdss_mdp_cmd_reconfigure_splash_done(struct mdss_mdp_ctl *ctl, bool handoff)
 	pdata = ctl->panel_data;
 
 	pdata->panel_info.cont_splash_enabled = 0;
-
+#if !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6TNMR7_PT_PANEL)
 	ret = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_CONT_SPLASH_FINISH,
 			NULL);
-
 	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_CLK_CTRL, (void *)0);
+#endif
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+
+	if (!sec_debug_is_enabled()) {
+		struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(ctl->mfd);
+		memblock_free(mdp5_data->splash_mem_addr, mdp5_data->splash_mem_size);
+		free_bootmem_late(mdp5_data->splash_mem_addr,
+				 mdp5_data->splash_mem_size);
+	}
 
 	return ret;
 }
@@ -543,6 +636,7 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 	unsigned long flags;
 	int need_wait = 0;
 	int rc = 0;
+	static int recovery_cnt;
 
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->priv_data;
 	if (!ctx) {
@@ -555,24 +649,38 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 		need_wait = 1;
 	spin_unlock_irqrestore(&ctx->clk_lock, flags);
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctl->num, ctx->koff_cnt, ctx->clk_enabled, ctx->rdptr_enabled, 0, 0);
+	xlog(__func__, ctl->num, ctx->koff_cnt, ctx->clk_enabled, ctx->rdptr_enabled, ctl->roi_bkup.w, ctl->roi_bkup.h);
 #endif
+	ctl->roi_bkup.w = ctl->width;
+	ctl->roi_bkup.h = ctl->height;
+
 	pr_debug("%s: need_wait=%d  intf_num=%d ctx=%p\n",
 			__func__, need_wait, ctl->intf_num, ctx);
 
 	if (need_wait) {
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6E3HA1_PT_PANEL)
+		if (!board_rev)
+			rc = wait_for_completion_timeout(
+				&ctx->pp_comp, msecs_to_jiffies(20));
+		else
+#endif
 		rc = wait_for_completion_timeout(
-				&ctx->pp_comp, msecs_to_jiffies(150));
+				&ctx->pp_comp, msecs_to_jiffies(1000));
 
 		if (rc <= 0) {
-			WARN(1, "cmd kickoff timed out (rc = %d) ctl=%d\n",
-						rc, ctl->num);
+			WARN(1, "cmd kickoff timed out (rc = %d, recovery_cnt = %d) ctl=%d\n",
+						rc, ++recovery_cnt, ctl->num);
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
 			dumpreg();
 			mdp5_dump_regs();
 			mdss_mdp_debug_bus();
+			mdss_dsi_debug_check_te();
 			xlog_dump();
+#if 0
+			mdss_mdp_cmd_pingpong_recovery(ctx);
+#else
 			panic("Pingpong Timeout");
+#endif
 #endif
 			rc = -EPERM;
 			mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_TIMEOUT);
@@ -615,16 +723,16 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 		return -ENODEV;
 	}
 
+	if (get_lcd_attached() == 0) {
+		pr_err("%s : lcd is not attached..\n",__func__);
+		return -ENODEV;
+	}
+
 	pr_debug("%s:+\n", __func__);
 
 	if (ctx->panel_on == 0) {
 		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_UNBLANK, NULL);
 		WARN(rc, "intf %d unblank error (%d)\n", ctl->intf_num, rc);
-
-		if (get_lcd_attached() == 0) {
-			pr_err("%s : lcd is not attached..\n",__func__);
-			return 0;
-		}
 
 		ctx->panel_on++;
 
@@ -633,6 +741,10 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 
 		ctx->first_kickoff = 1;
 	}
+
+#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
+	xlog(__func__, ctl->num, ctl->roi.x, ctl->roi.y, ctl->roi.w, ctl->roi.h, 0x1234);
+#endif
 
 	mdss_mdp_cmd_set_partial_roi(ctl);
 
@@ -710,15 +822,14 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl)
 	spin_unlock_irqrestore(&ctx->clk_lock, flags);
 
 	if (need_wait) {
-		if (pinfo->alpm_event)
+		if (pinfo->alpm_event && pinfo->alpm_event(CHECK_CURRENT_STATUS))
 			timeout_status = wait_for_completion_timeout(&ctx->stop_comp,\
 							STOP_TIMEOUT_FOR_ALPM);
 		else
 			timeout_status = wait_for_completion_timeout(&ctx->stop_comp,\
-							STOP_TIMEOUT);
+							msecs_to_jiffies(1000)); //STOP_TIMEOUT(16 * 4 frames) -> 1000
 		if (timeout_status <= 0) {
 			WARN(1, "stop cmd time out\n");
-
 			if (IS_ERR_OR_NULL(ctl->panel_data)) {
 				pr_err("no panel data\n");
 			} else {
@@ -733,7 +844,13 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl)
 			}
 		}
 	}
-
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6E3HA1_PT_PANEL)
+	if (!board_rev) {
+		mdss_mdp_irq_disable(MDSS_MDP_IRQ_PING_PONG_RD_PTR, ctx->pp_num);
+		if (ctx->rdptr_enabled)
+			ctx->rdptr_enabled = 0;
+	}
+#endif
 	if (cancel_work_sync(&ctx->clk_work))
 		pr_debug("no pending clk work\n");
 
@@ -815,6 +932,9 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 	init_completion(&ctx->pp_comp);
 	init_completion(&ctx->stop_comp);
 	spin_lock_init(&ctx->clk_lock);
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+	spin_lock_init(&ctx->te_lock);
+#endif
 	mutex_init(&ctx->clk_mtx);
 	INIT_WORK(&ctx->clk_work, clk_ctrl_work);
 	INIT_WORK(&ctx->pp_done_work, pingpong_done_work);
@@ -829,7 +949,6 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
 	xlog(__func__, ctl->num, ctx->koff_cnt, ctx->clk_enabled, ctx->rdptr_enabled, 0, 0);
 #endif
-
 	mdss_mdp_set_intr_callback(MDSS_MDP_IRQ_PING_PONG_COMP, ctx->pp_num,
 				   mdss_mdp_cmd_pingpong_done, ctl);
 

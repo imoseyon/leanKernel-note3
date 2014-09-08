@@ -26,7 +26,7 @@
                         reg = <0x50>;
                         interrupt-parent = <&msmgpio>;
                         interrupts = <64 0>;
-			vled_ic_1.9v-supply = <&pm8226_l27>;
+			vled_ic_1.8v-supply = <&pm8226_l27>;
                         mc96fr332,irda_irq_gpio = <&msmgpio 64 0x00>;
                         mc96fr332,irda_wake = <&msmgpio 62 0x00>;
 			mc96fr332,irda_led_en = <&msmgpio 115 0x00>;

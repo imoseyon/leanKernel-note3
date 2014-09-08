@@ -27,6 +27,11 @@
 #include <mach/sec_debug.h>
 #endif
 
+#if defined(CONFIG_SEC_PATEK_PROJECT) || defined(CONFIG_SEC_S_PROJECT)
+	static int check_pkey_press;
+#endif
+
+#ifdef CONFIG_ARCH_MSM8226  //should be removed
 extern struct class *sec_class;
 
 /* Common PNP defines */
@@ -131,6 +136,7 @@ struct qpnp_pon {
 static struct qpnp_pon *sys_reset_dev;
 #ifdef CONFIG_SEC_PM_DEBUG
 static int wake_enabled;
+static int reset_enabled;
 #endif
 
 static u32 s1_delay[PON_S1_COUNT_MAX + 1] = {
@@ -367,24 +373,60 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 		return -EINVAL;
 	}
 
-	printk(KERN_INFO "%s: PWR key is %s\n", __func__, (pon_rt_sts & pon_rt_bit) ? "pressed" : "released");
+	if (cfg->pon_type == PON_RESIN )
+		printk(KERN_INFO "%s: VOLUME DOWN key is %s\n",
+				__func__, (pon_rt_sts & pon_rt_bit) ? "pressed" : "released");
+	else
+		printk(KERN_INFO "%s: PWR key is %s\n",
+				__func__, (pon_rt_sts & pon_rt_bit) ? "pressed" : "released");
 
 	input_report_key(pon->pon_input, cfg->key_code,
 					(pon_rt_sts & pon_rt_bit));
 	input_sync(pon->pon_input);
 
+#ifdef CONFIG_SEC_PATEK_PROJECT
+	if((cfg->key_code == KEY_END) && (pon_rt_sts & pon_rt_bit)){
+		pon->powerkey_state = 1;
+	}else if((cfg->key_code == KEY_END) && !(pon_rt_sts & pon_rt_bit)){
+		pon->powerkey_state = 0;
+	}
+#else
 	if((cfg->key_code == 116) && (pon_rt_sts & pon_rt_bit)){
 		pon->powerkey_state = 1;
 	}else if((cfg->key_code == 116) && !(pon_rt_sts & pon_rt_bit)){
 		pon->powerkey_state = 0;
 	}
+#endif	
 
-#ifdef CONFIG_SEC_DEBUG
-	sec_debug_check_crash_key(cfg->key_code, pon->powerkey_state);
+#if defined(CONFIG_SEC_PM)
+	/* RESIN is used for VOL DOWN key, it should report the keycode for kernel panic */
+	if((cfg->key_code == 114) && (pon_rt_sts & pon_rt_bit)){
+		pon->powerkey_state = 1;
+	}else if((cfg->key_code == 114) && !(pon_rt_sts & pon_rt_bit)){
+		pon->powerkey_state = 0;
+	}
 #endif
 
+#ifdef CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_PATEK_PROJECT
+	sec_debug_check_crash_key(116, pon->powerkey_state);
+#else
+	sec_debug_check_crash_key(cfg->key_code, pon->powerkey_state);
+#endif
+#endif
+#if defined(CONFIG_SEC_PATEK_PROJECT) || defined(CONFIG_SEC_S_PROJECT)
+	check_pkey_press=pon->powerkey_state;
+#endif
 	return 0;
 }
+
+#if defined(CONFIG_SEC_PATEK_PROJECT) || defined(CONFIG_SEC_S_PROJECT)
+int check_short_pkey(void)
+{
+	return check_pkey_press;
+}
+EXPORT_SYMBOL(check_short_pkey);
+#endif
 
 static irqreturn_t qpnp_kpdpwr_irq(int irq, void *_pon)
 {
@@ -522,6 +564,14 @@ qpnp_config_pull(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
 	int rc;
 	u8 pull_bit;
 
+#if defined(CONFIG_SEC_K_PROJECT) || \
+	defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_SEC_KSPORTS_PROJECT) || \
+	defined(CONFIG_SEC_S_PROJECT) || defined(CONFIG_SEC_PATEK_PROJECT)
+	/* Do nothing in case of KPDPWR_RESIN*/
+	if (cfg->pon_type == PON_KPDPWR_RESIN)
+		return 0;
+#endif
+
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
 		pull_bit = QPNP_PON_KPDPWR_PULL_UP;
@@ -604,6 +654,39 @@ qpnp_config_reset(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
 		dev_err(&pon->spmi->dev, "Unable to configure S2 timer\n");
 		return rc;
 	}
+
+#ifdef CONFIG_ARCH_MSM8226
+#ifdef CONFIG_SEC_DEBUG
+	/* Configure reset type:
+	 * Debug level MID/HIGH: WARM Reset
+	 * Debug level LOW: HARD Reset
+	 */
+	if (sec_debug_is_enabled()) {
+		cfg->s2_type = 1;
+	} else {
+	/* For Millet VZW and Mattise VZW models always do warm reset */
+#if defined(CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MILLETLTE_VZW)
+		cfg->s2_type = 1;
+#elif defined(CONFIG_SEC_MILLET_PROJECT) || defined(CONFIG_MACH_MEGA23GEUR_OPEN) || defined(CONFIG_MACH_MEGA2LTE_KTT)
+		cfg->s2_type = 8;  //dVDD hard reset
+#elif defined(CONFIG_MACH_MATISSE3G_CHN_OPEN) || defined(CONFIG_MACH_MILLET3G_CHN_OPEN)
+		cfg->s2_type = 8;  //dVDD reset
+#else
+		cfg->s2_type = 7;
+#endif
+	}
+#endif
+#endif
+
+#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_MACH_KANAS3G_CTC) || defined(CONFIG_MACH_CHAGALL_LTE) || defined(CONFIG_MACH_KLIMT_LTE)
+	if (sec_debug_is_enabled()) {
+		cfg->s2_type = 1;	// warm reset
+	} else {
+		cfg->s2_type = 8;	// dVdd hard reset
+	}
+#endif
+#endif
 
 	rc = qpnp_pon_masked_write(pon, cfg->s2_cntl_addr,
 				QPNP_PON_S2_CNTL_TYPE_MASK, (u8)cfg->s2_type);
@@ -758,6 +841,8 @@ qpnp_pon_config_input(struct qpnp_pon *pon,  struct qpnp_pon_config *cfg)
 		pon->pon_input->phys = "qpnp_pon/input0";
 	}
 
+	/* don't send dummy release event when system resumes */
+	__set_bit(INPUT_PROP_NO_DUMMY_RELEASE, pon->pon_input->propbit);
 	input_set_capability(pon->pon_input, EV_KEY, cfg->key_code);
 
 	return 0;
@@ -954,7 +1039,7 @@ static int __devinit qpnp_pon_config_init(struct qpnp_pon *pon)
 			 * Get the reset parameters (bark debounce time and
 			 * reset debounce time) for the reset line.
 			 */
-#ifdef CONFIG_MACH_KLTE_VZW
+#if defined(CONFIG_MACH_KLTE_VZW) || defined(CONFIG_MACH_CHAGALL_VZW)
 			rc = of_property_read_u32(pp, "qcom,s1-timer2",
 							&cfg->s1_timer);
 #else
@@ -971,7 +1056,7 @@ static int __devinit qpnp_pon_config_init(struct qpnp_pon *pon)
 					"Incorrect S1 debounce time\n");
 				return -EINVAL;
 			}
-#ifdef CONFIG_MACH_KLTE_VZW
+#if defined(CONFIG_MACH_KLTE_VZW) || defined(CONFIG_MACH_CHAGALL_VZW)
 			rc = of_property_read_u32(pp, "qcom,s2-timer2",
 							&cfg->s2_timer);
 #else
@@ -1007,11 +1092,22 @@ static int __devinit qpnp_pon_config_init(struct qpnp_pon *pon)
 		 * specified if there is no key mapping on the reset line.
 		 */
 		rc = of_property_read_u32(pp, "linux,code", &cfg->key_code);
+
+#ifdef CONFIG_SEC_PATEK_PROJECT
+		if(cfg->key_code == 116){
+			dev_err(&pon->spmi->dev,
+				"patek power key code changed to %d(%d)\n",
+				KEY_END, cfg->key_code);
+			cfg->key_code = KEY_END;
+		}
+#else
 		if (rc && rc != -EINVAL) {
 			dev_err(&pon->spmi->dev,
 				"Unable to read key-code\n");
 			return rc;
 		}
+#endif
+
 		/* Register key configuration */
 		if (cfg->key_code) {
 			rc = qpnp_pon_config_input(pon, cfg);
@@ -1136,6 +1232,74 @@ static struct kernel_param_ops module_ops = {
 };
 
 module_param_cb(wake_enabled, &module_ops, &wake_enabled, 0644);
+
+static int qpnp_reset_enabled(const char *val, const struct kernel_param *kp)
+{
+	int ret = 0;
+	struct qpnp_pon_config *cfg;
+
+	ret = param_set_bool(val, kp);
+	if (ret) {
+		pr_err("Unable to set qpnp_reset_enabled: %d\n", ret);
+		return ret;
+	}
+
+	cfg = qpnp_get_cfg(sys_reset_dev, PON_KPDPWR);
+	if (!cfg) {
+		pr_err("Invalid config pointer\n");
+		return -EFAULT;
+	}
+
+	if (!reset_enabled)
+		qpnp_control_s2_reset(sys_reset_dev, cfg, 0);
+	else
+		qpnp_control_s2_reset(sys_reset_dev, cfg, 1);
+
+	pr_info("%s: reset_enabled = %d\n", KBUILD_MODNAME, reset_enabled);
+
+	return ret;
+}
+
+static struct kernel_param_ops reset_module_ops = {
+	.set = qpnp_reset_enabled,
+	.get = param_get_bool,
+};
+
+module_param_cb(reset_enabled, &reset_module_ops, &reset_enabled, 0644);
+#endif
+
+#ifdef CONFIG_SEC_PM
+int qpnp_pon_set_wd_timer(u8 s1_timer, u8 s2_timer, u8 reset_type)
+{
+	struct qpnp_pon *pon = sys_reset_dev;
+	u8 data;
+
+	spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid, 0x854, &data, 1);
+	pr_debug("%s: 0x854=0x%x\n", __func__, data);
+	spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid, 0x855, &data, 1);
+	pr_debug("%s: 0x855=0x%x\n", __func__, data);
+	spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid, 0x856, &data, 1);
+	pr_debug("%s: 0x856=0x%x\n", __func__, data);
+
+	data = s1_timer; /* S1_TIMER */
+	spmi_ext_register_writel(pon->spmi->ctrl, pon->spmi->sid, 0x854, &data, 1);
+	data = s2_timer; /* S2_TIMER */
+	spmi_ext_register_writel(pon->spmi->ctrl, pon->spmi->sid, 0x855, &data, 1);
+	data = reset_type; /* RESET_TYPE */
+	spmi_ext_register_writel(pon->spmi->ctrl, pon->spmi->sid, 0x856, &data, 1);
+	data = 0x1; /* WD_RESET_PET to clear WD timer */
+	spmi_ext_register_writel(pon->spmi->ctrl, pon->spmi->sid, 0x858, &data, 1);
+
+	spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid, 0x854, &data, 1);
+	pr_info("%s: 0x854=0x%x\n", __func__, data);
+	spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid, 0x855, &data, 1);
+	pr_info("%s: 0x855=0x%x\n", __func__, data);
+	spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid, 0x856, &data, 1);
+	pr_info("%s: 0x856=0x%x\n", __func__, data);
+
+	return 0;
+}
+EXPORT_SYMBOL(qpnp_pon_set_wd_timer);
 #endif
 
 static int __devinit qpnp_pon_probe(struct spmi_device *spmi)
@@ -1286,8 +1450,8 @@ static int qpnp_pon_remove(struct spmi_device *spmi)
 }
 
 static struct of_device_id spmi_match_table[] = {
-	{	.compatible = "qcom,qpnp-power-on",
-	}
+	{ .compatible = "qcom,qpnp-power-on", },
+	{}
 };
 
 static struct spmi_driver qpnp_pon_driver = {
@@ -1303,7 +1467,11 @@ static int __init qpnp_pon_init(void)
 {
 	return spmi_driver_register(&qpnp_pon_driver);
 }
+#ifdef CONFIG_ARCH_MSM8226
+subsys_initcall(qpnp_pon_init);
+#else
 module_init(qpnp_pon_init);
+#endif
 
 static void __exit qpnp_pon_exit(void)
 {

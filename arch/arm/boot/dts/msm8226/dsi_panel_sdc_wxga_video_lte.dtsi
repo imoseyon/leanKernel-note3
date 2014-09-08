@@ -18,8 +18,10 @@
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,rst-gpio = <&msmgpio 25 0>;
 		qcom,bl-rst-gpio = <&msmgpio 56 0>;
+		qcom,bl-sda-gpio = <&msmgpio 20 0>;
+		qcom,bl-scl-gpio = <&msmgpio 21 0>;
 		qcom,lcd_ldi_int = <&msmgpio 53 0>;
-		qcom,bl-on-gpio = <&pm8226_gpios 2 0>;
+		qcom,enable-gpio = <&pm8226_gpios 2 0>;
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-bpp = <24>;
@@ -78,7 +80,6 @@
 					39 01 00 00 01 00 05 FD 16 10 11 23
 					39 01 00 00 01 00 07 FE 00 02 03 21 00 70
 					39 01 00 00 01 00 02 53 26
-					39 01 00 00 05 00 02 51 5F
 					39 01 00 00 01 00 02 36 04
 					05 01 00 00 78 00 02 11 00      /* Sleep out */
 					39 01 00 00 01 00 02 36 00
@@ -92,9 +93,9 @@
 							06 01 00 00 00 00 01 dc 01];
 		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command = [05 01 00 00 40 00 02 28 00
+					39 01 00 00 01 00 03 F0 5A 5A
 					39 01 00 00 01 00 04 C3 40 00 20
-					05 01 00 00 01 00 02 10 00
-					15 01 00 00 01 00 02 DF 01];
+					05 01 00 00 0A 00 02 10 00];
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 	};
 };

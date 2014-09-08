@@ -64,5 +64,18 @@
 			/* fuelgaguge,repeated_fuelalert; */
 			qcom,sec-fuelgauge-vadc = <&pma8084_vadc>;
 		};
+
+		smb1357-charger@1c {
+			compatible = "smb1357-charger,i2c";
+			reg = <0x1c>;
+			interrupt-parent = <&pma8084_gpios>;
+			interrupts = <7 0>;
+			#qcom,float-voltage-mv = <4200>;
+			#qcom,iterm-ma = <100>;
+			#qcom,dc-psy-type = <8>;
+			#qcom,dc-psy-ma = <800>;
+			#qcom,charging-disabled;
+			#qcom,recharge-thresh-mv = <100>;
+		};
 	};
 };

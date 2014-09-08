@@ -30,7 +30,9 @@
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
 #include <asm/smp_plat.h>
+#if !defined(CONFIG_ARCH_MSM8226) && !defined(CONFIG_ARCH_MSM8610)
 #include "acpuclock.h"
+#endif
 #include <linux/suspend.h>
 
 #define MAX_LONG_SIZE 24
@@ -199,7 +201,11 @@ static int cpu_hotplug_handler(struct notifier_block *nb,
 	switch (val) {
 	case CPU_ONLINE:
 		if (!this_cpu->cur_freq)
+#if defined(CONFIG_ARCH_MSM8226) || defined(CONFIG_ARCH_MSM8610)
+			this_cpu->cur_freq = cpufreq_quick_get(cpu) * 1000;
+#else
 			this_cpu->cur_freq = acpuclk_get_rate(cpu);
+#endif
 	case CPU_ONLINE_FROZEN:
 		this_cpu->avg_load_maxfreq = 0;
 	}
@@ -401,7 +407,11 @@ static int __init msm_rq_stats_init(void)
 		cpufreq_get_policy(&cpu_policy, i);
 		pcpu->policy_max = cpu_policy.cpuinfo.max_freq;
 		if (cpu_online(i))
+#if defined(CONFIG_ARCH_MSM8226) || defined(CONFIG_ARCH_MSM8610)
+			pcpu->cur_freq = cpufreq_quick_get(i) * 1000;
+#else
 			pcpu->cur_freq = acpuclk_get_rate(i);
+#endif
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;

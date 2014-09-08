@@ -29,3 +29,6 @@
 /include/ "dsi-panel-s6e8aa0a-720p-video.dtsi"
 /include/ "dsi-panel-magna-wvga-video.dtsi"
 /include/ "dsi-panel-boe-wxga-video.dtsi"
+/include/ "dsi_panel_himax_hx8369b_tft_wvga_video.dtsi"
+/include/ "dsi-panel-s6e88a0-qhd-video.dtsi"
+/include/ "dsi_panel_himax_hx8369b_tft_wvga_video_victor3g.dtsi"

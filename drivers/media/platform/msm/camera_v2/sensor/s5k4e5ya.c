@@ -16,7 +16,7 @@ DEFINE_MSM_MUTEX(s5k4e5ya_mut);
 // Implementation KTD267 flashIC
 #if defined(CONFIG_MACH_VIENNAEUR) || defined(CONFIG_MACH_V2LTEEUR) || defined(CONFIG_MACH_LT03EUR)\
 	|| defined(CONFIG_MACH_LT03SKT)	|| defined(CONFIG_MACH_LT03KTT)\
-	|| defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_VIENNAVZW)
+	|| defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_VIENNAVZW) || defined(CONFIG_MACH_VIENNAKOR)
 struct class *camera_class;
 #endif
 
@@ -79,7 +79,7 @@ static int32_t s5k4e5ya_platform_probe(struct platform_device *pdev)
 // Implementation KTD267 flashIC
 #if defined(CONFIG_MACH_VIENNAEUR) || defined(CONFIG_MACH_V2LTEEUR) || defined(CONFIG_MACH_LT03EUR)\
 	|| defined(CONFIG_MACH_LT03SKT)	|| defined(CONFIG_MACH_LT03KTT)\
-	|| defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_VIENNAVZW)
+	|| defined(CONFIG_MACH_LT03LGT) || defined(CONFIG_MACH_VIENNAVZW) || defined(CONFIG_MACH_VIENNAKOR)
 	camera_class = class_create(THIS_MODULE, "camera");
 	if (IS_ERR(camera_class))
 		pr_err("failed to create device cam_dev_rear!\n");

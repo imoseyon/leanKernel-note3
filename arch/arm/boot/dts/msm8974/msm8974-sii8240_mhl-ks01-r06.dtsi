@@ -22,9 +22,8 @@
 			interrupt-parent = <&msmgpio>;
 			interrupts = <31 0x1>;
 			sii8240,gpio_mhl_reset = <&msmgpio 60 0x00>;/*&msmgpio 60 0x00*/
-			sii8240,gpio_mhl_reset_type = <0>;
+			sii8240,gpio_mhl_reset_type = "msmgpio";
 			sii8240,gpio_mhl_en = <0>;
-			sii8240,gpio_mhl_en_type = <0>;
 			sii8240,swing_level = <0x25>;
 
 			sii8240,gpio_mhl_irq = <&msmgpio 31 0x00>;

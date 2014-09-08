@@ -20,8 +20,6 @@
 		mdss_fb0: qcom,mdss_fb_primary {
 			cell-index = <0>;
 			compatible = "qcom,mdss-fb";
-			qcom,memory-reservation-type = "EBI1";	/* LPM Animation Patch, Allocate FB */
-			qcom,memory-reservation-size = <0x800000>;	/* LPM Animation Patch, Allocate FB */
 			qcom,memblock-reserve = <0x3200000 0x800000>;
 		};
 	};

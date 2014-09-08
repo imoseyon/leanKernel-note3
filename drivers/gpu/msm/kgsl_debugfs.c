@@ -30,9 +30,9 @@ static int pm_dump_set(void *data, u64 val)
 	struct kgsl_device *device = data;
 
 	if (val) {
-		mutex_lock(&device->mutex);
+		kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 		kgsl_postmortem_dump(device, 1);
-		mutex_unlock(&device->mutex);
+		kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 	}
 
 	return 0;
@@ -347,7 +347,7 @@ kgsl_process_init_debugfs(struct kgsl_process_private *private)
 	 * So if debugfs is disabled in kernel, return as
 	 * success.
 	 */
-	dentry = debugfs_create_file("mem", 0400, private->debug_root, private,
+	dentry = debugfs_create_file("mem", 0444, private->debug_root, private,
 			    &process_mem_fops);
 
 	if (IS_ERR(dentry)) {

@@ -65,4 +65,8 @@ static inline int qpnp_pon_trigger_config(enum pon_trigger_source pon_src,
 }
 #endif
 
+#ifdef CONFIG_SEC_PM
+int qpnp_pon_set_wd_timer(u8 s1_timer, u8 s2_timer, u8 reset_type);
+#endif
+
 #endif

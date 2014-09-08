@@ -121,8 +121,25 @@ static inline void tima_send_cmd4 (unsigned int p1, unsigned int p2, unsigned in
         "ldmfd   sp!, {r0-r5, r11}" : : "r" (p1), "r" (p2), "r" (p3), "r" (p4), "r" (cmdid) : "r0","r2","r3","r4","r5","cc");
 }
 
+static inline void tima_send_cmd5 (unsigned int p1, unsigned int p2, unsigned int p3, unsigned int p4, unsigned int p5,unsigned int cmdid)
+{
+	asm volatile (
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+        ".arch_extension sec\n"
+#endif	
+	"stmfd   sp!, {r0-r6, r11}\n"
+        "mov     r11, r0\n"
+        "mov     r2, %0\n"
+	"mov     r3, %1\n"  
+	"mov     r4, %2\n"  
+	"mov     r5, %3\n"  
+	"mov     r6, %4\n"  
+	"mov     r0, %5\n"
+	"smc     #1\n" 
+        "ldmfd   sp!, {r0-r6, r11}" : : "r" (p1), "r" (p2), "r" (p3), "r" (p4), "r" (p5),"r" (cmdid) : "r0","r2","r3","r4","r5","r6","cc");
+}
 
-#endif
+#endif	/* CONFIG_TIMA_RKP */
 static inline void set_cr(unsigned int val)
 {
 	asm volatile("mcr p15, 0, %0, c1, c0, 0	@ set CR"

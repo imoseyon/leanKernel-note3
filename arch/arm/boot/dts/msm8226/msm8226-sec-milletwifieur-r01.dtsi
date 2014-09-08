@@ -10,21 +10,15 @@
  * GNU General Public License for more details.
  */
 
-/include/ "dsi_panel_sdc_wxga_video.dtsi"
-/include/ "msm8226-camera-sensor-mtp-millet3g_eur-r02.dtsi"
+/include/ "msm8226-camera-sensor-mtp-millet_eur-r02.dtsi"
 /include/ "msm8226-mc96irda.dtsi"
+/include/ "dsi_panel_sdc_wxga_video.dtsi"
 
 &soc {
 	serial@f991f000 {
 		status = "ok";
 	};
-	samsung,vibrator{
-		compatible = "vibrator";
-		samsung,motor-en = <&pm8226_gpios 5 0>;
-		samsung,is_pmic_vib_en = <1>;
-		status = "ok";
-    };
-	 /*# CONFIG_SND_SOC_MAX98504*/
+/*# CONFIG_SND_SOC_MAX98504*/
 		qcom,msm-dai-mi2s {
 			compatible = "qcom,msm-dai-mi2s";
 			qcom,msm-dai-q6-mi2s-tert {
@@ -75,18 +69,26 @@
 		};
 	};
 
-       i2c@f9926000{ /*BLSP-1 QUP-3*/
-		sm5502@25 { /*SM5502 Chip node (similar to tsu7621 muic)*/
-			compatible = "sm5502,i2c";
-			reg = <0x25>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <67 0>;
-			sm5502,irq-gpio = <&msmgpio 67 0x00>;
-			sm5502,wc-irq-gpio = <0>;
-			sm5502,wakeup = <1>;		
-			sm5502,uarton-gpio = <&msmgpio 109 0x00>;
-		};
-       };
+	i2c@15{ /*SM5502 Chip node (similar to tsu7621 muic)*/
+                cell-index = <15>;
+                compatible = "i2c-gpio";
+                gpios = <&msmgpio 14 0  /*SDA*/
+                        &msmgpio 15 0  /*SCL*/
+                        >;
+                i2c-gpio,delay-us = <2>;
+                #address-cells = <1>;
+                #size-cells = <0>;
+                sm5502@25{
+                        compatible = "sm5502,i2c";
+                        reg = <0x25>;
+                        interrupt-parent = <&msmgpio>;
+                        interrupts= <67 0>;
+                        sm5502,irq-gpio = <&msmgpio 67 0x00>;
+                        sm5502,gpio-sda = <&msmgpio 14 0x00>;
+                        sm5502,gpio-scl = <&msmgpio 15 0x00>;
+                        sm5502,uarton-gpio = <&msmgpio 109 0x00>;
+                };
+        };
 
 	i2c@19 {
 		cell-index = <19>;
@@ -137,30 +139,29 @@
                                 lp8556,sda-gpio = <&msmgpio 20 0x00>;
                 };
         };
-	i2c@33{
-		cell-index = <33>;
-		compatible = "i2c-gpio";
-		gpios = <&msmgpio 0 0
-			&msmgpio 1 0>;
-	sx9500-i2c@28 {
-			compatible = "sx9500-i2c";
-			reg = <0x28>;
-			interrupt-parent = <&msmgpio>;
-			sx9500-i2c,nirq-gpio = <&msmgpio 66 0x00>;
-		};
-	};
+
 	i2c@f9924000 { /* BLSP1 QUP2 */
 		compatible = "qcom,i2c-qup";
 		qcom,scl-gpio = <&msmgpio 7 0>;
 		qcom,sda-gpio = <&msmgpio 6 0>;
-		k3dh@1D {
+		k2hh@1D {
 			compatible = "stm,k2hh";
 			reg = <0x1D>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <54 0>;
+			stm,scl = <&msmgpio 7 0>;
+			stm,sda = <&msmgpio 6 0>;
 			stm,irq_gpio = <&msmgpio 54 0x00>;
 			stm,reg_vdd = "8226_l19";
 			stm,reg_vio = "8226_lvs1";
+			stm,axis_map_x = <1>;
+			stm,axis_map_y = <0>;
+			stm,axis_map_z = <2>;
+			stm,negate_x = <1>;
+			stm,negate_y = <0>;
+			stm,negate_z = <1>;
+			stm,poll_interval = <100>;
+			stm,min_interval = <2>;
 		};
 	};
 
@@ -179,13 +180,13 @@
 				interrupts = <17 0>; /* Touch int gpio */
 				vdd_en-gpio = <&msmgpio 31 0x01>; /*Touch En 1 gpio*/
 				vdd_en2-gpio = <&msmgpio 114 0x01>; /* Touch En2 gpio */
-				tkey_en-gpio = <&pm8226_gpios 8 0>;
 				tsp_vendor1-gpio = <&msmgpio 55 0x00>; /*TSP Vendor1 GPIO*/
 				tsp_vendor2-gpio = <&msmgpio 34 0x00>; /*TSP Vendor2 GPIO */
 				melfas,irq-gpio = <&msmgpio 17 0x00>; /*TSP IRQ GPIO */
 				melfas,panel-coords = <0  0 800 1280>;
 				melfas,config_fw_version = "melfas mms252";
 				melfas,i2c-pull-up = <1>;
+				melfas,key1 = <254>;
 		};
 	};
 	gpio_keys {
@@ -202,7 +203,7 @@
 		};
 
 		vol_down {
-			lable = "volume_down";
+			label = "volume_down";
 			gpios = <&msmgpio 107 0x1>;
 			linux,input-type = <1>;
 			linux,code = <114>;
@@ -269,6 +270,7 @@
 
 		qcom,cdc-mclk-gpios = <&pm8226_gpios 1 0>;
 		/*qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 2 0>;*/
+		vdd-earjack-supply = <&pm8226_l19>;
 	};
 
 	battery {
@@ -278,6 +280,8 @@
 		battery,charger_name = "smb358";
 		battery,fuelgauge_name = "bms";
 		battery,technology = <2>; /* POWER_SUPPLY_TECHNOLOGY_LION */
+		battery,ta_int = <&msmgpio 115 0x1>;
+		battery,ta_irq_attr = <0x3>;
 
 		battery,chip_vendor = "QCOM";
 		battery,temp_adc_type = <1>; /* SEC_BATTERY_ADC_TYPE_AP */
@@ -286,8 +290,8 @@
 
 		battery,adc_check_count = <5>;
 
-		battery,cable_check_type = <4>; /* SEC_BATTERY_CABLE_CHECK_PSY */
-		battery,cable_source_type = <1>; /* SEC_BATTERY_CABLE_SOURCE_EXTERNAL */
+		battery,cable_check_type = <5>; /* SEC_BATTERY_CABLE_CHECK_PSY */
+		battery,cable_source_type = <3>; /* SEC_BATTERY_CABLE_SOURCE_EXTERNAL */
 		battery,event_check;
 		battery,event_waiting_time = <600>;
 		battery,polling_type = <1>; /* SEC_BATTERY_MONITOR_ALARM */
@@ -300,27 +304,27 @@
 
 		battery,ovp_uvlo_check_type = <3>; /* SEC_BATTERY_OVP_UVLO_CHGPOLLING */
 
-		battery,thermal_source = <4>; /* NONE */
+		battery,thermal_source = <2>; /* SEC_BATTERY_THERMAL_SOURCE_ADC */
 
 		battery,temp_table_adc = <27281 27669 28178 28724 29342 30101 30912 31807 32823 33858 34950 36049 37054
 			38025 38219 38448 38626 38795 38989 39229 39540 39687 39822 40523 41123 41619>;
 		battery,temp_table_data = <700 650 600 550 500 450 400 350 300 250 200 150 100
 			50 40 30 20 10 0 (-10) (-30) (-40) (-50) (-100) (-150) (-200)>;
-		battery,temp_check_type = <0>; /* SEC_BATTERY_TEMP_CHECK_NONE */
+		battery,temp_check_type = <2>; /* SEC_BATTERY_TEMP_CHECK_TEMP */
 		battery,temp_check_count = <1>;
-		battery,temp_high_threshold_event = <650>;
-		battery,temp_high_recovery_event = <440>;
-		battery,temp_low_threshold_event = <(-45)>;
+		battery,temp_high_threshold_event = <600>;
+		battery,temp_high_recovery_event = <450>;
+		battery,temp_low_threshold_event = <(-50)>;
 		battery,temp_low_recovery_event = <0>;
-		battery,temp_high_threshold_normal = <650>;
-		battery,temp_high_recovery_normal = <440>;
-		battery,temp_low_threshold_normal = <(-45)>;
+		battery,temp_high_threshold_normal = <600>;
+		battery,temp_high_recovery_normal = <450>;
+		battery,temp_low_threshold_normal = <(-50)>;
 		battery,temp_low_recovery_normal = <0>;
-		battery,temp_high_threshold_lpm = <650>;
-		battery,temp_high_recovery_lpm = <440>;
-		battery,temp_low_threshold_lpm = <(-45)>;
+		battery,temp_high_threshold_lpm = <600>;
+		battery,temp_high_recovery_lpm = <450>;
+		battery,temp_low_threshold_lpm = <(-50)>;
 		battery,temp_low_recovery_lpm = <0>;
-		battery,full_check_type = <7>; /* SEC_BATTERY_FULLCHARGED_CHGPSY */
+		battery,full_check_type = <2>; /* SEC_BATTERY_FULLCHARGED_FG_CURRENT */
 		battery,full_check_type_2nd = <3>; /* SEC_BATTERY_FULLCHARGED_TIME */
 		battery,full_check_count = <1>;
 		battery,chg_gpio_full_check = <0>;
@@ -330,7 +334,7 @@
 		   SEC_BATTERY_FULL_CONDITION_NOTIMEFULL |
 		   SEC_BATTERY_FULL_CONDITION_VCELL */
 		battery,full_condition_type = <13>;
-		battery,full_condition_soc = <97>;
+		battery,full_condition_soc = <95>;
 		battery,full_condition_vcell = <4300>;
 
 		battery,recharge_check_count = <1>;
@@ -345,20 +349,27 @@
 		charger{
 			status = "disable";
 			/* Charger */
-			battery,charger_name = "sec-charger";
+			battery,charger_name = "smb358";
 			battery,chg_gpio_en = <0>;
 			battery,chg_polarity_en = <0>;
 			battery,chg_gpio_status = <0>;
 			battery,chg_polarity_status = <0>;
-			battery,chg_float_voltage = <4200>;
+			battery,chg_float_voltage = <4340>;
 			battery,ovp_uvlo_check_type = <3>; /* SEC_BATTERY_OVP_UVLO_CHGPOLLING */
-			battery,full_check_type = <7>; /* SEC_BATTERY_FULLCHARGED_CHGPSY */
+			battery,full_check_type = <2>; /* SEC_BATTERY_FULLCHARGED_FG_CURRENT */
 
-			battery,input_current_limit = <1800 460 460 1800 460 900 1000 460 460 1000 650 1800 1800 460 400 700 1300 300 1000 1800 460>;
-			battery,fast_charging_current = <2100 0 460 2100 460 1200 1000 460 0 1200 750 2100 2100 0 400 700 1300 300 1000 2100 0>;
-			battery,full_check_current_1st = <200 0 200 200 200 200 200 200 0 200 200 200 200 0 200 200 200 200 200 200 0>;
-			battery,full_check_current_2nd = <2400 0 2400 1800 2400 2400 2400 2400 0 2400 2400 2400 2400 0 2400 2400 2400 2400 2400 2400 0>;
+			battery,input_current_limit = <1000 460 460 1000 460 900 1000 460 460 1000 650 1000 1000 460 500 300 700 1300 300 1000 1000 460 460>;
+			battery,fast_charging_current = <2100 0 460 2100 460 1200 1000 460 0 1200 750 2100 2100 (-1) 500 300 700 1300 300 1000 2100 0 0>;
+			battery,full_check_current_1st = <223 0 223 223 223 223 223 223 0 223 223 223 223 0 223 223 223 223 223 223 223 0 0>;
+			battery,full_check_current_2nd = <2400 0 2400 2400 2400 2400 2400 2400 0 2400 2400 2400 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
 		};
+	};
+
+	memory_hole: qcom,msm-mem-hole {
+		     compatible = "qcom,msm-mem-hole";
+		     qcom,memblock-remove = <0x08400000 0x2000000
+					     0x0cb00000 0x2b00000 /* Increase TZ apps region to 6MB (SR #0133393) + 1MB reserved for TIMA logging at 0xd100000 */
+					     0x0fa00000 0x500000>; /* Address and Size of Hole */
 	};
 };
 
@@ -375,6 +386,8 @@
 
 	qcom,hsusb-otg-mode = <3>;
 	vbus_otg-supply = <&pm8226_chg_otg>;
+	qcom,hsusb-otg-phy-init-seq =
+			<0x44 0x80 0x4F 0x81 0x24 0x82 0x13 0x83 0xffffffff>;
 };
 
 &sdcc1 {
@@ -403,6 +416,7 @@
 
 &sdhc_1 {
 	vdd-supply = <&pm8226_l17>;
+	qcom,vdd-always-on;
 	qcom,vdd-voltage-level = <2950000 2950000>;
 	qcom,vdd-current-level = <800 500000>;
 
@@ -486,76 +500,6 @@
 };
 
 &spmi_bus {
-	qcom,pm8226@0 {
-		qcom,leds@a100 {
-			status = "okay";
-			qcom,led_mpp_2 {
-				label = "mpp";
-				linux,name = "button-backlight";
-				linux,default-trigger = "none";
-				qcom,default-state = "off";
-				qcom,max-current = <40>;
-				qcom,current-setting = <5>;
-				qcom,id = <6>;
-				qcom,mode = "manual";
-				qcom,source-sel = <1>;
-				qcom,mode-ctrl = <0x60>;
-			};
-		};
-
-		qcom,leds@a300 {
-			status = "okay";
-			qcom,led_mpp_4 {
-				label = "mpp";
-				linux,name = "green";
-				linux,default-trigger = "battery-full";
-				qcom,default-state = "off";
-				qcom,max-current = <40>;
-				qcom,current-setting = <5>;
-				qcom,id = <6>;
-				qcom,mode = "pwm";
-				qcom,pwm-us = <1000>;
-				qcom,source-sel = <8>;
-				qcom,mode-ctrl = <0x60>;
-				qcom,pwm-channel = <0>;
-				qcom,start-idx = <1>;	
-				qcom,ramp-step-ms = <120>;
-				qcom,duty-pcts = [00 00 00 00 00
-						  00 00 00 00 00
-						  50 00 00 00 00
-						  00 00 00 00 00
-						  00];
-				qcom,use-blink;
-			};
-		};
-
-		qcom,leds@a500 {
-			status = "disabled";
-			qcom,led_mpp_6 {
-				label = "mpp";
-				linux,name = "red";
-				linux,default-trigger = "battery-charging";
-				qcom,default-state = "off";
-				qcom,max-current = <40>;
-				qcom,current-setting = <5>;
-				qcom,id = <6>;
-				qcom,mode = "pwm";
-				qcom,pwm-us = <1000>;
-				qcom,mode-ctrl = <0x60>;
-				qcom,source-sel = <10>;
-				qcom,pwm-channel = <5>;
-				qcom,start-idx = <1>;
-				qcom,ramp-step-ms = <120>;
-				qcom,duty-pcts = [00 00 00 00 00
-						  00 00 00 00 00
-						  50 00 00 00 00
-						  00 00 00 00 00
-						  00];
-				qcom,use-blink;
-			};
-		};
-	};
-
 	qcom,pm8226@1 {
                 qcom,leds@d300 {
                         status = "okay";
@@ -782,4 +726,9 @@
 
 &dsi_sdc_wxga_vid {
 	qcom,cont-splash-enabled;
+};
+
+&pm8226_lvs1 {
+		regulator-always-on;
+		regulator-boot-on;
 };

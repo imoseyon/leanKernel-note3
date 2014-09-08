@@ -77,6 +77,7 @@ static unsigned long lru_count;
  * Lock Ordering: ashmex_mutex -> i_mutex -> i_alloc_sem
  */
 static DEFINE_MUTEX(ashmem_mutex);
+struct task_struct	*mutex_owner = NULL;
 
 static struct kmem_cache *ashmem_area_cachep __read_mostly;
 static struct kmem_cache *ashmem_range_cachep __read_mostly;
@@ -203,8 +204,10 @@ static int ashmem_release(struct inode *ignored, struct file *file)
 	struct ashmem_range *range, *next;
 
 	mutex_lock(&ashmem_mutex);
+	mutex_owner = current;
 	list_for_each_entry_safe(range, next, &asma->unpinned_list, unpinned)
 		range_del(range);
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 
 	if (asma->file)
@@ -221,7 +224,7 @@ static ssize_t ashmem_read(struct file *file, char __user *buf,
 	int ret = 0;
 
 	mutex_lock(&ashmem_mutex);
-
+	mutex_owner = current;
 	/* If size is not set, or set to 0, always return EOF. */
 	if (asma->size == 0)
 		goto out_unlock;
@@ -230,7 +233,7 @@ static ssize_t ashmem_read(struct file *file, char __user *buf,
 		ret = -EBADF;
 		goto out_unlock;
 	}
-
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 
 	/*
@@ -247,6 +250,7 @@ static ssize_t ashmem_read(struct file *file, char __user *buf,
 	return ret;
 
 out_unlock:
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 	return ret;
 }
@@ -257,7 +261,7 @@ static loff_t ashmem_llseek(struct file *file, loff_t offset, int origin)
 	int ret;
 
 	mutex_lock(&ashmem_mutex);
-
+	mutex_owner = current;
 	if (asma->size == 0) {
 		ret = -EINVAL;
 		goto out;
@@ -276,6 +280,7 @@ static loff_t ashmem_llseek(struct file *file, loff_t offset, int origin)
 	file->f_pos = asma->file->f_pos;
 
 out:
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 	return ret;
 }
@@ -293,7 +298,7 @@ static int ashmem_mmap(struct file *file, struct vm_area_struct *vma)
 	int ret = 0;
 
 	mutex_lock(&ashmem_mutex);
-
+	mutex_owner = current;
 	/* user needs to SET_SIZE before mapping */
 	if (unlikely(!asma->size)) {
 		ret = -EINVAL;
@@ -336,6 +341,7 @@ static int ashmem_mmap(struct file *file, struct vm_area_struct *vma)
 	asma->vm_start = vma->vm_start;
 
 out:
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 	return ret;
 }
@@ -363,6 +369,9 @@ static int ashmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	if (sc->nr_to_scan && !(sc->gfp_mask & __GFP_FS))
 		return -1;
 	if (!sc->nr_to_scan)
+		return lru_count;
+
+	if (current == mutex_owner)
 		return lru_count;
 
 	if (!mutex_trylock(&ashmem_mutex))
@@ -396,7 +405,7 @@ static int set_prot_mask(struct ashmem_area *asma, unsigned long prot)
 	int ret = 0;
 
 	mutex_lock(&ashmem_mutex);
-
+	mutex_owner = current;
 	/* the user can only remove, not add, protection bits */
 	if (unlikely((asma->prot_mask & prot) != prot)) {
 		ret = -EINVAL;
@@ -410,6 +419,7 @@ static int set_prot_mask(struct ashmem_area *asma, unsigned long prot)
 	asma->prot_mask = prot;
 
 out:
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 	return ret;
 }
@@ -426,13 +436,14 @@ static int set_name(struct ashmem_area *asma, void __user *name)
 	if (len == ASHMEM_NAME_LEN)
 		lname[ASHMEM_NAME_LEN - 1] = '\0';
 	mutex_lock(&ashmem_mutex);
+	mutex_owner = current;
 
 	/* cannot change an existing mapping's name */
 	if (unlikely(asma->file))
 		ret = -EINVAL;
 	else
 		strcpy(asma->name + ASHMEM_NAME_PREFIX_LEN, lname);
-
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 	return ret;
 }
@@ -444,6 +455,7 @@ static int get_name(struct ashmem_area *asma, void __user *name)
 	size_t len;
 
 	mutex_lock(&ashmem_mutex);
+	mutex_owner = current;
 	if (asma->name[ASHMEM_NAME_PREFIX_LEN] != '\0') {
 		/*
 		 * Copying only `len', instead of ASHMEM_NAME_LEN, bytes
@@ -455,6 +467,7 @@ static int get_name(struct ashmem_area *asma, void __user *name)
 		len = strlen(ASHMEM_NAME_DEF) + 1;
 		memcpy(lname, ASHMEM_NAME_DEF, len);
 	}
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 	if (unlikely(copy_to_user(name, lname, len)))
 		ret = -EFAULT;
@@ -616,7 +629,7 @@ static int ashmem_pin_unpin(struct ashmem_area *asma, unsigned long cmd,
 	pgend = pgstart + (pin.len / PAGE_SIZE) - 1;
 
 	mutex_lock(&ashmem_mutex);
-
+	mutex_owner = current;
 	switch (cmd) {
 	case ASHMEM_PIN:
 		ret = ashmem_pin(asma, pgstart, pgend);
@@ -628,7 +641,7 @@ static int ashmem_pin_unpin(struct ashmem_area *asma, unsigned long cmd,
 		ret = ashmem_get_pin_status(asma, pgstart, pgend);
 		break;
 	}
-
+	mutex_owner = NULL;
 	mutex_unlock(&ashmem_mutex);
 
 	return ret;

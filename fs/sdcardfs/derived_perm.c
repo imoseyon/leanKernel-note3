@@ -204,13 +204,19 @@ int is_obbpath_invalid(struct dentry *dent)
 			path_get(&di->lower_path);
 			//lower_parent = lock_parent(lower_path->dentry);
 
-			path_buf = kmalloc(PATH_MAX, GFP_KERNEL);
-			obbpath_s = d_path(&di->lower_path, path_buf, PATH_MAX);
-			if (d_unhashed(di->lower_path.dentry) ||
-				strcasecmp(sbi->obbpath_s, obbpath_s)) {
+			path_buf = kmalloc(PATH_MAX, GFP_ATOMIC);
+			if(!path_buf) {
 				ret = 1;
+				printk(KERN_ERR "sdcardfs: "
+					"fail to allocate path_buf in %s.\n", __func__);
+			} else {
+				obbpath_s = d_path(&di->lower_path, path_buf, PATH_MAX);
+				if (d_unhashed(di->lower_path.dentry) ||
+					strcasecmp(sbi->obbpath_s, obbpath_s)) {
+					ret = 1;
+				}
+				kfree(path_buf);
 			}
-			kfree(path_buf);
 
 			//unlock_dir(lower_parent);
 			path_put(&di->lower_path);

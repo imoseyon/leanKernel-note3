@@ -64,6 +64,27 @@ static inline u32 mdss_mdp_get_pclk_rate(struct mdss_mdp_ctl *ctl)
 		pinfo->clk_rate;
 }
 
+//Qualcomm patch modification   
+static inline u32 mdss_mdp_clk_fudge_factor(struct mdss_mdp_mixer *mixer, 
+ u32 rate) 
+{ 
+     struct mdss_panel_info *pinfo = &mixer->ctl->panel_data->panel_info; 
+ 
+     rate = MDSS_MDP_CLK_FUDGE_FACTOR(rate); 
+ 
+     /* 
+        * If the panel is video mode and its back porch period is 
+        * small, the workaround of increasing mdp clk is needed to 
+        * avoid underrun. 
+        */ 
+     if (mixer->ctl->is_video_mode && pinfo && 
+         (pinfo->lcdc.v_back_porch < MDP_MIN_VBP)) 
+            rate = MDSS_MDP_CLK_FUDGE_FACTOR(rate); 
+ 
+     return rate; 
+} 
+
+//above Qualcomm patch modification
 static u32 __mdss_mdp_ctrl_perf_ovrd_helper(struct mdss_mdp_mixer *mixer,
 		u32 *npipe)
 {
@@ -118,7 +139,7 @@ static void __mdss_mdp_ctrl_perf_ovrd(struct mdss_data_type *mdata,
 	}
 
 #if !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_FULL_HD_PT_PANEL) && !defined (CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)\
-	&& !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_YOUM_CMD_FULL_HD_PT_PANEL)
+	&& !defined(CONFIG_FB_MSM_MIPI_SAMSUNG_YOUM_CMD_FULL_HD_PT_PANEL) &&!defined (CONFIG_FB_MSM_MIPI_MAGNA_OCTA_CMD_HD_PT_PANEL)
 	*ab_quota = MDSS_MDP_BUS_FUDGE_FACTOR_AB(*ab_quota);
 	if (npipe > 1)
 		*ib_quota = MDSS_MDP_BUS_FUDGE_FACTOR_HIGH_IB(*ib_quota);
@@ -126,13 +147,12 @@ static void __mdss_mdp_ctrl_perf_ovrd(struct mdss_data_type *mdata,
 		*ib_quota = MDSS_MDP_BUS_FUDGE_FACTOR_IB(*ib_quota);
 #elif defined(CONFIG_VIDEO_MHL_V2)
 	if (hdmi_hpd_status()) {
-		pr_info("%s: hdmi_hpd_status fuction was called @ %d\n", __func__, __LINE__);
 		*ab_quota = MDSS_MDP_BUS_FUDGE_FACTOR_AB(*ab_quota);
 		if (npipe > 1)
 			*ib_quota = MDSS_MDP_BUS_FUDGE_FACTOR_HIGH_IB(*ib_quota);
 		else
 			*ib_quota = MDSS_MDP_BUS_FUDGE_FACTOR_IB(*ib_quota);
-		}
+	}
 #endif
 	if (ovrd && (*ib_quota < MDSS_MDP_BUS_FLOOR_BW)) {
 		*ib_quota = MDSS_MDP_BUS_FLOOR_BW;
@@ -149,6 +169,9 @@ static int mdss_mdp_ctl_perf_commit(struct mdss_data_type *mdata, u32 flags)
 	int cnum;
 	unsigned long clk_rate = 0;
 	u64 bus_ab_quota = 0, bus_ib_quota = 0;
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL)
+	u64 min_bus_ab_quota = 1103984640 , min_bus_ib_quota = 827988480;
+#endif
 
 	if (!flags) {
 		pr_err("nothing to update\n");
@@ -171,10 +194,17 @@ static int mdss_mdp_ctl_perf_commit(struct mdss_data_type *mdata, u32 flags)
 		__mdss_mdp_ctrl_perf_ovrd(mdata, &bus_ab_quota, &bus_ib_quota);
 		bus_ib_quota <<= MDSS_MDP_BUS_FACTOR_SHIFT;
 		bus_ab_quota <<= MDSS_MDP_BUS_FACTOR_SHIFT;
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL)
+		if (bus_ab_quota < min_bus_ab_quota)
+			bus_ab_quota = min_bus_ab_quota;
+		if (bus_ib_quota < min_bus_ib_quota)
+			bus_ib_quota = min_bus_ib_quota;
+#endif
 		mdss_mdp_bus_scale_set_quota(bus_ab_quota, bus_ib_quota);
 	}
+
 	if (flags & MDSS_MDP_PERF_UPDATE_CLK) {
-		clk_rate = MDSS_MDP_CLK_FUDGE_FACTOR(clk_rate);
+		//clk_rate = MDSS_MDP_CLK_FUDGE_FACTOR(clk_rate);
 		pr_debug("update clk rate = %lu HZ\n", clk_rate);
 		mdss_mdp_set_clk_rate(clk_rate);
 	}
@@ -250,7 +280,22 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 		perf->ib_quota = (quota / pipe->dst.h) * v_total;
 	}
 	perf->ab_quota = quota;
+	rate = mdss_mdp_clk_fudge_factor(mixer, rate); //Qualcomm patch modify   
 	perf->mdp_clk_rate = rate;
+
+        //Qualcomm patch modify    
+        pr_debug("src(w,h)(%d,%d) dst(w,h)(%d,%d) v_total=%d v_deci=%d fps=%d\n", 
+              pipe->src.w, pipe->src.h, pipe->dst.w, pipe->dst.h, v_total, 
+              pipe->vert_deci, fps); 
+	//above Qualcomm patch modify  
+	
+	/* Incase of more than 10x Upscale, Increasing BW & MDP Clk */
+	if ( ((pipe->dst.h / pipe->src.h) > 10) ||
+		((pipe->dst.w / pipe->src.w) > 10) ) {
+			pr_debug("*** Exceptional case : more than 10x Upscale!!!\n");
+			perf->ib_quota = perf->ib_quota * 10;
+			perf->ab_quota = perf->ab_quota * 10;
+	}
 
 	pr_debug("mixer=%d pnum=%d clk_rate=%u bus ab=%u ib=%u\n",
 		 mixer->num, pipe->num, rate, perf->ab_quota, perf->ib_quota);
@@ -268,10 +313,18 @@ static void mdss_mdp_perf_mixer_update(struct mdss_mdp_mixer *mixer,
 	u32 v_total;
 	int i;
 	u32 max_clk_rate = 0, ab_total = 0, ib_total = 0;
+	u32 min_bw;
+	int layerCnt = 0;
 
 	*bus_ab_quota = 0;
 	*bus_ib_quota = 0;
 	*clk_rate = 0;
+
+	pinfo = &mixer->ctl->panel_data->panel_info;
+
+	min_bw = mdss_panel_get_min_bw(pinfo);
+
+	min_bw >>= MDSS_MDP_BUS_FACTOR_SHIFT;
 
 	if (!mixer->rotator_mode) {
 		if (mixer->type == MDSS_MDP_MIXER_TYPE_INTF) {
@@ -285,10 +338,12 @@ static void mdss_mdp_perf_mixer_update(struct mdss_mdp_mixer *mixer,
 			v_total = mixer->height;
 		}
 		*clk_rate = mixer->width * v_total * fps;
-		if ((pinfo && pinfo->lcdc.v_back_porch < MDP_MIN_VBP)
-				&& (pinfo->type == MIPI_VIDEO_PANEL))
-			*clk_rate = MDSS_MDP_CLK_FUDGE_FACTOR(*clk_rate);
-
+		//Qualcomm patch modification     
+		//if ((pinfo && pinfo->lcdc.v_back_porch < MDP_MIN_VBP)
+		//		&& (pinfo->type == MIPI_VIDEO_PANEL))
+		//	*clk_rate = MDSS_MDP_CLK_FUDGE_FACTOR(*clk_rate);
+               *clk_rate = mdss_mdp_clk_fudge_factor(mixer, *clk_rate);
+		//above Qualcomm patch modify      
 		if (!pinfo) {
 			/* perf for bus writeback */
 			*bus_ab_quota = fps * mixer->width * mixer->height * 3;
@@ -306,6 +361,7 @@ static void mdss_mdp_perf_mixer_update(struct mdss_mdp_mixer *mixer,
 		if (mdss_mdp_perf_calc_pipe(pipe, &perf))
 			continue;
 
+		layerCnt++;
 		ab_total += perf.ab_quota >> MDSS_MDP_BUS_FACTOR_SHIFT;
 		ib_total += perf.ib_quota >> MDSS_MDP_BUS_FACTOR_SHIFT;
 		if (perf.mdp_clk_rate > max_clk_rate)
@@ -314,6 +370,23 @@ static void mdss_mdp_perf_mixer_update(struct mdss_mdp_mixer *mixer,
 
 	*bus_ab_quota += ab_total;
 	*bus_ib_quota += ib_total;
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG_OCTA_VIDEO_720P_PT_PANEL)
+	if(layerCnt >= 2) min_bw = min_bw*5/3; // ADJUST point
+#endif
+
+#if defined(CONFIG_ARCH_MSM8226) || defined(CONFIG_FB_MSM_MDSS_SAMSUNG_OCTA_VIDEO_720P_PT_PANEL)
+	/*override in case we fall short of min BW*/
+	if (!mixer->rotator_mode) {
+			if (mixer->type == MDSS_MDP_MIXER_TYPE_INTF) {
+				if((*bus_ab_quota < min_bw) && (min_bw > 0 ))
+					*bus_ab_quota = min_bw;
+				if((*bus_ib_quota < min_bw) && (min_bw > 0))
+					*bus_ib_quota = min_bw;
+			}
+	}
+#endif
+
 	if (max_clk_rate > *clk_rate)
 		*clk_rate = max_clk_rate;
 
@@ -321,11 +394,17 @@ static void mdss_mdp_perf_mixer_update(struct mdss_mdp_mixer *mixer,
 		 *clk_rate, *bus_ab_quota, *bus_ib_quota);
 }
 
+#define ADDING_BW_ROTATE_MODE 130
+#define ADDING_BW_LANDSCAPE_MODE 107
+
 static int mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl)
 {
 	int ret = MDSS_MDP_PERF_UPDATE_SKIP;
 	u32 clk_rate, ab_quota, ib_quota;
 	u32 max_clk_rate = 0, total_ab_quota = 0, total_ib_quota = 0;
+
+	struct mdss_mdp_pipe *pipe;
+	int i, need_more_bw = 0, rotate_mode = 0, display_width = 0, display_height = 0, upscale_ratio = 0;
 
 	if (ctl->mixer_left) {
 		mdss_mdp_perf_mixer_update(ctl->mixer_left, &ab_quota,
@@ -373,6 +452,89 @@ static int mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl)
 			else
 				ret = MDSS_MDP_PERF_UPDATE_LATE;
 		}
+
+		if (ctl->mixer_left) {
+			for (i = 0; i < MDSS_MDP_MAX_STAGE; i++) {
+				pipe = ctl->mixer_left->stage_pipe[i];
+
+				if (!pipe || !pipe->mixer)
+					continue;
+
+				if((pipe->src.w%10) || (pipe->src.h%10))
+					if (pipe->src_fmt->format == MDP_Y_CBCR_H2V2_VENUS) {
+						display_width += pipe->src.w;
+						display_height += pipe->src.h;
+						need_more_bw = 1;
+
+						if (pipe->flags & MDP_ROT_90)
+							rotate_mode = 1;
+					}
+				if((pipe->dst.h == 2133) &&
+					(((pipe->dst.h * 10) / pipe->src.h) >= 33) &&
+					((pipe->dst.w * 10 / pipe->src.w) >= 33)) {
+					upscale_ratio = pipe->dst.w * 10 / pipe->src.w;
+					need_more_bw = 1;
+				}
+			}
+		}
+
+		if (ctl->mixer_right) {
+			for (i = 0; i < MDSS_MDP_MAX_STAGE; i++) {
+				pipe = ctl->mixer_right->stage_pipe[i];
+
+				if (!pipe || !pipe->mixer)
+					continue;
+
+				if ((pipe->src.w%10) || (pipe->src.h%10))
+					if (pipe->src_fmt->format == MDP_Y_CBCR_H2V2_VENUS) {
+						display_width += pipe->src.w;
+						display_height += pipe->src.h;
+						need_more_bw = 1;
+
+						if (pipe->flags & MDP_ROT_90)
+							rotate_mode = 1;
+					}
+			}
+		}
+
+		if (need_more_bw) {
+			if ((display_width % 10) || (display_height % 10)) {
+				if (rotate_mode) {
+					if ((display_width < 500) || (display_height < 500)) {
+						/* add 390% more bw*/
+						total_ab_quota *= (ADDING_BW_ROTATE_MODE * 3);
+						total_ib_quota *= (ADDING_BW_ROTATE_MODE * 3);
+
+						/* 145000 is 300Mhz BW */
+						if (total_ab_quota < 29229000) {
+							total_ab_quota = total_ib_quota = 29229000;
+							pr_debug("Force make it over 1114614500 bw");
+						} else
+							pr_debug("add 390%c more bw",'%');
+					} else {
+						/* add 30% more bw*/
+						total_ab_quota *= ADDING_BW_ROTATE_MODE;
+						total_ib_quota *= ADDING_BW_ROTATE_MODE;
+						pr_debug("add 30%c more bw",'%');
+					}
+				} else {
+					/* add 7% more bw*/
+					total_ab_quota *= ADDING_BW_LANDSCAPE_MODE;
+					total_ib_quota *= ADDING_BW_LANDSCAPE_MODE;
+					pr_debug("add 7%c more bw",'%');
+				}
+
+				total_ab_quota /= 100;
+				total_ib_quota /= 100;
+			}
+			else {
+				if(upscale_ratio) {
+					total_ab_quota = total_ab_quota * upscale_ratio / 10;
+					total_ib_quota = total_ab_quota * upscale_ratio / 10;
+				}
+			}
+		}
+
 		ctl->bus_ab_quota = total_ab_quota;
 		ctl->bus_ib_quota = total_ib_quota;
 		ctl->perf_changed |= MDSS_MDP_PERF_UPDATE_BUS;
@@ -675,7 +837,7 @@ static inline int mdss_mdp_set_split_ctl(struct mdss_mdp_ctl *ctl,
 	return 0;
 }
 
-static inline struct mdss_mdp_ctl *mdss_mdp_get_split_ctl(
+struct mdss_mdp_ctl *mdss_mdp_get_split_ctl(
 		struct mdss_mdp_ctl *ctl)
 {
 	if (ctl && ctl->mixer_right && (ctl->mixer_right->ctl != ctl))
@@ -1020,8 +1182,8 @@ int mdss_mdp_ctl_split_display_setup(struct mdss_mdp_ctl *ctl,
 
 	mixer->width = sctl->width;
 	mixer->height = sctl->height;
-
-	mixer->roi = (struct mdss_mdp_img_rect) {0, 0, mixer->width, mixer->height}; 
+	mixer->roi = (struct mdss_mdp_img_rect)
+				{0, 0, mixer->width, mixer->height};
 	sctl->mixer_left = mixer;
 
 	return mdss_mdp_set_split_ctl(ctl, sctl);
@@ -1107,25 +1269,33 @@ int mdss_mdp_ctl_intf_event(struct mdss_mdp_ctl *ctl, int event, void *arg)
 	return rc;
 }
 
-static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl)
+static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	struct mdss_mdp_mixer *mixer;
 	u32 outsize, temp;
 	int ret = 0;
 	int i, nmixers;
 
-	if (ctl->start_fnc)
-		ret = ctl->start_fnc(ctl);
-	else
-		pr_warn("no start function for ctl=%d type=%d\n", ctl->num,
-				ctl->panel_data->panel_info.type);
-
-	if (ret) {
-		pr_err("unable to start intf\n");
-		return ret;
-	}
-
 	pr_debug("ctl_num=%d\n", ctl->num);
+
+	/*
+	 * Need start_fnc in 2 cases:
+	 * (1) handoff
+	 * (2) continuous splash finished.
+	 */
+	if (handoff || !ctl->panel_data->panel_info.cont_splash_enabled) {
+		if (ctl->start_fnc)
+			ret = ctl->start_fnc(ctl);
+		else
+			pr_warn("no start function for ctl=%d type=%d\n",
+					ctl->num,
+					ctl->panel_data->panel_info.type);
+
+		if (ret) {
+			pr_err("unable to start intf\n");
+			return ret;
+		}
+	}
 
 	if (!ctl->panel_data->panel_info.cont_splash_enabled) {
 		nmixers = MDSS_MDP_INTF_MAX_LAYERMIXER +
@@ -1153,7 +1323,7 @@ static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl)
 	return ret;
 }
 
-int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl)
+int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	struct mdss_mdp_ctl *sctl;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
@@ -1168,12 +1338,17 @@ int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl)
 	if (ret)
 		return ret;
 
-
 	sctl = mdss_mdp_get_split_ctl(ctl);
 
 	mutex_lock(&ctl->lock);
 
-	ctl->power_on = true;
+	/*
+	 * keep power_on false during handoff to avoid unexpected
+	 * operations to overlay.
+	 */
+	if (!handoff)
+		ctl->power_on = true;
+
 	ctl->bus_ab_quota = 0;
 	ctl->bus_ib_quota = 0;
 	ctl->clk_rate = 0;
@@ -1186,10 +1361,10 @@ int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl)
 		goto error;
 	}
 
-	ret = mdss_mdp_ctl_start_sub(ctl);
+	ret = mdss_mdp_ctl_start_sub(ctl, handoff);
 	if (ret == 0) {
 		if (sctl) { /* split display is available */
-			ret = mdss_mdp_ctl_start_sub(sctl);
+			ret = mdss_mdp_ctl_start_sub(sctl, handoff);
 			if (!ret)
 				mdss_mdp_ctl_split_display_enable(1, ctl, sctl);
 		} else if (ctl->mixer_right) {
@@ -1858,6 +2033,7 @@ int mdss_mdp_display_wait4comp(struct mdss_mdp_ctl *ctl)
 		ret = ctl->wait_fnc(ctl, NULL);
 
 	if (ctl->perf_changed) {
+		if (ctl->mixer_left && !ctl->mixer_left->rotator_mode)
 		mdss_mdp_ctl_perf_commit(ctl->mdata, ctl->perf_changed);
 		ctl->perf_changed = 0;
 	}
@@ -1957,9 +2133,13 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 
 	if (ctl->wait_pingpong)
 		ctl->wait_pingpong(ctl, NULL);
+	ctl->roi_bkup.w = ctl->roi.w;
+	ctl->roi_bkup.h = ctl->roi.h;
 
-	/* postprocessing setup, including dspp */
-	mdss_mdp_pp_setup_locked(ctl);
+	if (ctl->mfd && ctl->mfd->dcm_state != DTM_ENTER)
+		/* postprocessing setup, including dspp */
+		mdss_mdp_pp_setup_locked(ctl);
+
 	mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_FLUSH, ctl->flush_bits);
 	if (sctl) {
 		mdss_mdp_ctl_write(sctl, MDSS_MDP_REG_CTL_FLUSH,

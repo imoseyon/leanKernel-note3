@@ -61,6 +61,7 @@
 		tdmb_pwr_en = <&pm8941_gpios 23 0>;
 		tdmb_irq = <&msmgpio 73 0>;
 		tdmb_ant_irq = <&msmgpio 18 0>;
+		tdmb_use_irq;
 	};
 };
 

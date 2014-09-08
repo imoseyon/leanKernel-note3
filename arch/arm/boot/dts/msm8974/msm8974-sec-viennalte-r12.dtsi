@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 
-/include/ "msm8974-leds.dtsi"
+/include/ "msm8974-lt03-leds.dtsi"
 /include/ "msm8974-camera-sensor-vienna-r00.dtsi"
 /include/ "msm8974-sii8240_mhl-v1lte-r01.dtsi"
 
@@ -41,7 +41,6 @@
 	mdss_mdp: qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "edp";
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* 32 MB allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1F40000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
 			qcom,memblock-reserve = <0x03200000 0x01F00000>;
 			qcom,mdss-fb-split = <1536 1024>;
@@ -497,7 +496,7 @@
 			battery,full_check_type = <2>; /* SEC_BATTERY_FULLCHARGED_FG_CURRENT */
 
 			battery,input_current_limit = <1800 0 460 1800 460 460 1000 460 1800 1800 0 1800 1800 0 1000 400 700 1300 300 1000 1800 460 460>;
-			battery,fast_charging_current = <2000 0 460 2000 460 460 1000 460 2000 2000 0 2000 2000 (-1) 1300 400 700 1300 300 1000 2100 0 0>;
+			battery,fast_charging_current = <2000 0 460 2000 460 460 1000 460 2000 2000 0 2000 2000 (-1) 1300 400 700 1300 200 1000 2100 0 0>;
 			battery,full_check_current_1st = <300 0 300 300 300 300 300 300 300 300 0 300 300 0 300 300 300 300 300 300 300 0 0>;
 			battery,full_check_current_2nd = <2400 0 2400 2400 2400 2400 2400 2400 2400 2400 0 2400 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
 		};
@@ -689,18 +688,18 @@
 
 	qcom,vdd-always-on;
 	qcom,vdd-voltage-level = <1800000 1800000>;
-	qcom,vdd-current-level = <2000 16000>;
+	qcom,vdd-current-level = <2000 32000>;
 
 	qcom,vdd-io-always-on;
 	qcom,vdd-io-voltage-level = <1800000 1800000>;
-	qcom,vdd-io-current-level = <2000 16000>;
+	qcom,vdd-io-current-level = <2000 32000>;
 
 	qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 	qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 	qcom,pad-drv-on = <0x7 0x4 0x4>; /* 16mA, 10mA, 10mA */
 	qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
 
-	qcom,current-limit = <16000>;
+	qcom,current-limit = <32000>;
 
 	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
 

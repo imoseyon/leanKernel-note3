@@ -27,8 +27,19 @@
 #define MSM_FB_MAX_DEV_LIST 32
 
 #define MSM_FB_ENABLE_DBGFS
+/*
+ * This temporary work around of fence time-out modification is being added to handle
+ * screen being locked up/blank after resuming - being discussed in SR# 01515705.
+ * needs to be rolled back once a solution is found to address the issue at hand
+ */
+#if defined(CONFIG_FB_MSM_MDSS_TC_DSI2LVDS_WXGA_PANEL) || defined(CONFIG_FB_MSM_MDSS_SDC_WXGA_PANEL)\
+		|| defined(CONFIG_FB_MSM_MDSS_CPT_QHD_PANEL) || defined(CONFIG_FB_MSM_MDSS_MAGNA_OCTA_VIDEO_720P_PANEL)
+#define WAIT_FENCE_FIRST_TIMEOUT (0.5 * MSEC_PER_SEC)
+#define WAIT_FENCE_FINAL_TIMEOUT (1 * MSEC_PER_SEC)
+#else
 #define WAIT_FENCE_FIRST_TIMEOUT (3 * MSEC_PER_SEC)
 #define WAIT_FENCE_FINAL_TIMEOUT (10 * MSEC_PER_SEC)
+#endif
 /* Display op timeout should be greater than total timeout */
 #define WAIT_DISP_OP_TIMEOUT ((WAIT_FENCE_FIRST_TIMEOUT + \
 		WAIT_FENCE_FINAL_TIMEOUT) * MDP_MAX_FENCE_FD)
@@ -176,6 +187,7 @@ struct msm_fb_data_type {
 	u32 ext_bl_ctrl;
 	u32 calib_mode;
 	u32 bl_level;
+	u32 bl_previous;
 	u32 bl_scale;
 	u32 bl_min_lvl;
 	u32 unset_bl_level;
@@ -183,6 +195,8 @@ struct msm_fb_data_type {
 	u32 bl_level_old;
 	struct mutex bl_lock;
 	struct mutex lock;
+	struct mutex power_state;
+	struct mutex ctx_lock;
 
 	struct platform_device *pdev;
 
@@ -210,8 +224,10 @@ struct msm_fb_data_type {
 	/* for non-blocking */
 	struct task_struct *disp_thread;
 	atomic_t commits_pending;
+	atomic_t kickoff_pending;
 	wait_queue_head_t commit_wait_q;
 	wait_queue_head_t idle_wait_q;
+	wait_queue_head_t kickoff_wait_q;
 	bool shutdown_pending;
 
 	struct msm_fb_backup_type msm_fb_backup;
@@ -220,6 +236,9 @@ struct msm_fb_data_type {
 
 	u32 dcm_state;
 	struct list_head proc_list;
+	u32 wait_for_kickoff;
+
+	int blank_mode;
 };
 
 static inline void mdss_fb_update_notify_update(struct msm_fb_data_type *mfd)
@@ -241,9 +260,15 @@ static inline void mdss_fb_update_notify_update(struct msm_fb_data_type *mfd)
 	}
 }
 #ifdef CONFIG_FB_MSM_CAMERA_CSC
+#if defined(CONFIG_MACH_KS01SKT) || defined(CONFIG_MACH_KS01EUR) || defined(CONFIG_MACH_KS01KTT) || defined(CONFIG_MACH_KS01LGT) || defined(CONFIG_SEC_ATLANTIC_PROJECT)
+extern u8 prev_csc_update;
+#endif
 extern u8 csc_update;
+#if !defined(CONFIG_MACH_KS01SKT) && !defined(CONFIG_MACH_KS01EUR) && !defined(CONFIG_MACH_KS01KTT) && !defined(CONFIG_MACH_KS01LGT) && !defined(CONFIG_SEC_ATLANTIC_PROJECT)
 extern u8 pre_csc_update;
 #endif
+#endif
+
 #if defined (CONFIG_FB_MSM_MDSS_DBG_SEQ_TICK)
 
 enum{
@@ -264,14 +289,25 @@ void mdss_dbg_tick_save(int op_name);
 
 #endif
 
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+enum TE_SETTING {
+	TE_SET_INIT = -1,
+	TE_SET_READY,
+	TE_SET_START,
+	TE_SET_DONE,
+	TE_SET_FAIL,
+};
+#endif
+
 extern int boot_mode_lpm, boot_mode_recovery;
 int mdss_fb_get_phys_info(unsigned long *start, unsigned long *len, int fb_num);
+int mdss_fb_get_first_cmt_flag(void);
 void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl);
 void mdss_fb_update_backlight(struct msm_fb_data_type *mfd);
 void mdss_fb_wait_for_fence(struct msm_sync_pt_data *sync_pt_data);
 void mdss_fb_signal_timeline(struct msm_sync_pt_data *sync_pt_data);
 int mdss_fb_register_mdp_instance(struct msm_mdp_interface *mdp);
-#if defined(CONFIG_MDNIE_TFT_MSM8X26)
+#if defined(CONFIG_MDNIE_TFT_MSM8X26) || defined (CONFIG_FB_MSM_MDSS_S6E8AA0A_HD_PANEL) || defined(CONFIG_MDNIE_VIDEO_ENHANCED)
 void mdss_negative_color(int is_negative_on);
 #endif
 int mdss_fb_dcm(struct msm_fb_data_type *mfd, int req_state);

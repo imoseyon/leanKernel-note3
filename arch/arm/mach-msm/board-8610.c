@@ -63,6 +63,10 @@
 #include <mach/msm8x10-thermistor.h>
 #endif
 
+#ifdef CONFIG_PROC_AVC
+#include <linux/proc_avc.h>
+#endif
+
 static struct memtype_reserve msm8610_reserve_table[] __initdata = {
 	[MEMTYPE_SMI] = {
 	},
@@ -158,6 +162,10 @@ void __init msm8610_init(void)
 
 #ifdef CONFIG_SEC_DEBUG
 	sec_debug_init();
+#endif
+
+#ifdef CONFIG_PROC_AVC
+	sec_avc_log_init();
 #endif
 
 	if (socinfo_init() < 0)

@@ -164,6 +164,8 @@ source "drivers/motor/Kconfig"
 source "drivers/sensorhub/Kconfig"
 source "drivers/fingerprint/Kconfig"
 
+source "drivers/adsp_factory/Kconfig"
+
 source "drivers/felica/Kconfig"
 
 source "drivers/extcon/Kconfig"

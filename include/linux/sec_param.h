@@ -26,6 +26,9 @@ struct sec_param_data {
 	unsigned int boot_alarm_value_l;
 	unsigned int boot_alarm_value_h;
 #endif
+#ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
+	unsigned int normal_poweroff;
+#endif
 } ;
 
 enum sec_param_index {
@@ -45,6 +48,9 @@ enum sec_param_index {
 	param_index_boot_alarm_set,
 	param_index_boot_alarm_value_l,
 	param_index_boot_alarm_value_h,
+#endif
+#ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
+	param_index_normal_poweroff,
 #endif
 } ;
 

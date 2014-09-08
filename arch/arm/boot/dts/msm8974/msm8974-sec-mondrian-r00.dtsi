@@ -37,7 +37,6 @@
 		qcom,mdss-pref-prim-intf = "dsi";
 		mdss_fb0: qcom,mdss_fb_primary {
 			qcom,memory-reservation-type = "EBI1";
-			qcom,memory-reservation-size = <0x1F40000>;
 			qcom,memblock-reserve = <0x03200000 0x01F00000>;
 			qcom,mdss-fb-split = <800 800>;
 		};
@@ -66,6 +65,22 @@
 		    max77888,wakeup = <1>;
 		};
     };
+
+	i2c@19 {
+        cell-index = <19>;
+        compatible = "i2c-gpio";
+        gpios = <&msmgpio 51 0 /* sda */
+                 &msmgpio 52 0 /* scl */
+                >;
+		sec-fuelgauge@36 {
+			compatible = "sec-fuelgauge,i2c";
+			reg = <0x36>;
+			fuelgauge,jig_gpio = <&msmgpio 76 0>;
+			fuelgauge,fuel_int = <&pm8941_gpios 26 0x1>;
+			fuelgauge,capacity_calculation_type = <7>;
+			fuelgauge,fuel_alert_soc = <2>;
+		};
+	};
 
 	i2c@22 {
 		cell-index = <22>;
@@ -178,7 +193,8 @@
 			battery,input_current_limit = <1900 460 460 1900 460 900 1000 460 460 1000 650 1900 1900 460 1300 300 700 1300 300 1000 1900 460 460>;
 			battery,fast_charging_current = <2100 0 460 2100 460 1200 1000 460 0 1200 750 2100 2100 0 1300 300 700 1300 300 1000 2100 0 0>;
 			battery,full_check_current_1st = <350 0 350 350 350 350 350 350 0 350 350 350 350 0 350 350 350 350 350 350 350 0 0>;
-			battery,full_check_current_2nd = <2400 0 2400 2400 2400 2400 2400 2400 0 2400 2400 2400 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
+			battery,full_check_current_2nd = <1200 0 1200 1200 1200 1200 1200 1200 0 1200 1200 1200 1200 0 1200 1200 1200 1200 1200 1200 1200 0 0>;
+			battery,full_check_current_1st_sdi = <200 0 200 200 200 200 200 200 0 200 200 200 200 0 200 200 200 200 200 200 200 0 0>;
 		};
 	};
 
@@ -258,6 +274,7 @@
 			synaptics,supply-name = "8941_l22", "8941_l10";	/* the name of regulators, in power-on order */
 			synaptics,irq-gpio = <&pm8941_gpios 30 0x1>;
 			synaptics,reset-gpio = <&pm8941_gpios 20 0x1>;
+			synaptics,id-gpio = <&msmgpio 42 0x0>;
 			synaptics,i2c-pull-up = <1>;
 			synaptics,tsp-project = "Mondrian";
 			synaptics,tsp-coords = <1599 2559>;
@@ -318,22 +335,6 @@
 	/* BLSP#8 */
 	/* i2c@f9964000 {
 	}; */
-
-	/* BLSP#9 */
-	i2c@f9965000 {
-		status = "okay";
-		sec-fuelgauge@36 {
-			compatible = "sec-fuelgauge,i2c";
-			reg = <0x36>;
-			fuelgauge,fuel_int = <&pm8941_gpios 26 0x1>;
-			fuelgauge,capacity_max = <1000>;
-			fuelgauge,capacity_max_margin = <50>;
-			fuelgauge,capacity_min = <0>;
-			fuelgauge,capacity_calculation_type = <7>;
-			fuelgauge,fuel_alert_soc = <2>;
-			fuelgauge,jig_gpio = <&msmgpio 76 0x00>;
-		};
-	};
 
 	/* BLSP#10 */
 	i2c@f9966000 {
@@ -412,20 +413,20 @@
 
 	earjack {
 		compatible = "sec_jack";
-		qcom,earjack-read-vadc = <&pm8941_vadc>;		
+		qcom,earjack-read-vadc = <&pm8941_vadc>;
 		qcom,earjack-detect-gpio = <&pm8941_gpios 22 0>;
 		qcom,earjack-micbias-gpio = <&pm8941_gpios 34 0>;
 		qcom,earjack-sendend-gpio = <&msmgpio 77 0>;
 		qcom,earjack-fsa_en-gpio = <&msmgpio 8 1>;
 		qcom,send-end-active-high;
 
-		det-zones-list = <&det_zones 3 10000 10 0>,
-						 <&det_zones 639 10000 10 0>,
+		det-zones-list = <&det_zones 0 10000 10 0>,
+						 <&det_zones 900 10000 10 0>,
 						 <&det_zones 2400 10000 10 1>,
 						 <&det_zones 9999 10000 10 1>;
-		but-zones-list = <&but_zones 0 0 227>,
-						 <&but_zones 1 228 310>,
-						 <&but_zones 2 311 500>;
+		but-zones-list = <&but_zones 0 0 155>,
+						 <&but_zones 1 156 310>,
+						 <&but_zones 2 311 800>;
 		mpp-channel-scaling = <4 1 3>;
 	};
 
@@ -652,9 +653,9 @@
 
 &pm8941_l10 {
 /* TSP 1.8V IO regulator */
-	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <1800000>;
-	qcom,init-voltage = <1800000>;
+	regulator-min-microvolt = <1850000>;
+	regulator-max-microvolt = <1850000>;
+	qcom,init-voltage = <1850000>;
 };
 
 &pm8941_chg {
@@ -823,6 +824,11 @@
 	};
 
 	gpio@d500 { /* GPIO 22 */
+		qcom,mode = <0>;	/* input */
+		qcom,pull = <5>;		/* pull-up with 30uA current strength */
+		qcom,vin-sel = <2>;	/* VIN=S3 */
+		qcom,src-sel = <0>;	/* constant */
+		qcom,master_en = <1>;
 	};
 
 	gpio@d600 { /* GPIO 23 */
@@ -846,6 +852,10 @@
 	};
 
 	gpio@d900 { /* GPIO 26 */
+		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */
+		qcom,vin-sel = <2>;		/* QPNP_PIN_VIN2 */
+		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_CONSTANT */
 	};
 
 	gpio@da00 { /* GPIO 27 */
@@ -877,9 +887,25 @@
 	};
 
 	gpio@e000 { /* GPIO 33 */
+		qcom,mode = <1>;		/* Digital output */
+		qcom,output-type = <0>;	/* CMOS logic */
+		qcom,pull = <5>;			/* QPNP_PIN_PULL_NO */
+		qcom,invert = <0>;		/* Output low initially */
+		qcom,vin-sel = <2>;		/* PM8941 S3 = 1.8 V */
+		qcom,src-sel = <0>;		/* Constant */
+		qcom,out-strength = <2>;	/* Medium drive strength */
+		qcom,master-en = <1>;	/* Enable GPIO */
 	};
 
 	gpio@e100 { /* GPIO 34 */
+		qcom,mode = <1>;		/* Digital output */
+		qcom,output-type = <0>;	/* CMOS logic */
+		qcom,pull = <5>;			/* QPNP_PIN_PULL_NO */
+		qcom,invert = <0>;		/* Output low initially */
+		qcom,vin-sel = <2>;		/* PM8941 S3 = 1.8 V */
+		qcom,src-sel = <0>;		/* Constant */
+		qcom,out-strength = <2>;	/* Medium drive strength */
+		qcom,master-en = <1>;	/* Enable GPIO */
 	};
 
 	gpio@e200 { /* GPIO 35 */
@@ -918,6 +944,10 @@
 	};
 
 	mpp@a300 { /* MPP 4 */
+		qcom,mode = <4>; /* AIN input */
+		qcom,ain-route = <3>; /* AMUX 8 */
+		qcom,master-en = <1>;/* Enable MPP4 */
+		qcom,src-sel = <0>; /* Function constant */
 	};
 
 	mpp@a400 { /* MPP 5 */

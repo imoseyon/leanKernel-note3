@@ -170,7 +170,7 @@ enum {
 #define MDP_BLUR 0x10
 #define MDP_BLEND_FG_PREMULT 0x20000
 #define MDP_IS_FG 0x40000
-#define MDP_SOLID_FILL 0x0000100
+#define MDP_SOLID_FILL 0x00000020
 #define MDP_DEINTERLACE 0x80000000
 #define MDP_SHARPENING  0x40000000
 #define MDP_NO_DMA_BARRIER_START	0x20000000
@@ -423,7 +423,7 @@ struct mdp_pa_mem_col_cfg {
 	uint32_t val_region;
 };
 
-#define MDP_SIX_ZONE_TABLE_NUM		384
+#define MDP_SIX_ZONE_LUT_SIZE		384
 
 struct mdp_pa_v2_data {
 	/* Mask bits for PA features */
@@ -432,6 +432,7 @@ struct mdp_pa_v2_data {
 	uint32_t global_sat_adj;
 	uint32_t global_val_adj;
 	uint32_t global_cont_adj;
+	uint32_t six_zone_len;
 	uint32_t *six_zone_curve_p0;
 	uint32_t *six_zone_curve_p1;
 	uint32_t six_zone_thresh;
@@ -801,10 +802,16 @@ enum {
 	DCM_ENTER,
 	DCM_EXIT,
 	DCM_BLANK,
+	DTM_ENTER,
+	DTM_EXIT,
 };
 
+#define MDSS_PP_SPLIT_LEFT_ONLY		0x10000000
+#define MDSS_PP_SPLIT_RIGHT_ONLY	0x20000000
+#define MDSS_PP_SPLIT_MASK		0x30000000
+
 #define MDSS_MAX_BL_BRIGHTNESS 255
-#define AD_BL_LIN_LEN (MDSS_MAX_BL_BRIGHTNESS + 1)
+#define AD_BL_LIN_LEN 256
 
 #define MDSS_AD_MODE_AUTO_BL	0x0
 #define MDSS_AD_MODE_AUTO_STR	0x1

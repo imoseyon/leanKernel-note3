@@ -49,7 +49,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 		"BMS", "MISC", "Wireless", "CARDOCK", "UARTOFF", "OTG",
 		"LAN_HUB", "MHL_500", "MHL_900", "MHL_1500", "MHL_USB",
 		"SMART_OTG", "SMART_NOTG", "POWER_SHARING",
-		"WIRELESS_REMOVE"
+		"Mains", "POGO"
 	};
 	static char *status_text[] = {
 		"Unknown", "Charging", "Discharging", "Not charging", "Full"
@@ -59,7 +59,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 	};
 	static char *health_text[] = {
 		"Unknown", "Good", "Overheat", "Warm", "Dead", "Over voltage",
-		"Unspecified failure", "Cold", "Cool", "Under voltage"
+		"Unspecified failure", "Cold", "Cool", "Under voltage", "OverheatLimit"
 	};
 	static char *technology_text[] = {
 		"Unknown", "NiMH", "Li-ion", "Li-poly", "LiFe", "NiCd",
@@ -156,6 +156,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(current_max),
 	POWER_SUPPLY_ATTR(input_current_max),
 	POWER_SUPPLY_ATTR(input_current_trim),
+	POWER_SUPPLY_ATTR(input_current_settled),
 	POWER_SUPPLY_ATTR(current_now),
 	POWER_SUPPLY_ATTR(current_avg),
 	POWER_SUPPLY_ATTR(power_now),

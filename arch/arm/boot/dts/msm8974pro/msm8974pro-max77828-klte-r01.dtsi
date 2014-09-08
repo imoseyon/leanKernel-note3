@@ -11,8 +11,8 @@
  */
 
 / {
-	 haptic_pdata: max77804k_haptic_driver {
-                haptic,mode = "lra";
+	haptic_pdata: max77828-haptic{
+		haptic,mode = <1>;
                 haptic,divisor = <128>;
         };
 

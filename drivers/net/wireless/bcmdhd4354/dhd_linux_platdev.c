@@ -1,7 +1,7 @@
 /*
  * Linux platform device for DHD WLAN adapter
  *
- * Copyright (C) 1999-2013, Broadcom Corporation
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -245,7 +245,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		resource = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "bcm4329_wlan_irq");
 	if (resource) {
 		adapter->irq_num = resource->start;
-		adapter->intr_flags = resource->flags & IRQF_TRIGGER_MASK;
+		adapter->intr_flags = resource->flags;
 	}
 
 	wifi_plat_dev_probe_ret = dhd_wifi_platform_load();
@@ -374,7 +374,7 @@ static int wifi_ctrlfunc_register_drv(void)
 		adapter->wifi_plat_data = (void *)&dhd_wlan_control;
 		resource = &dhd_wlan_resources;
 		adapter->irq_num = resource->start;
-		adapter->intr_flags = resource->flags & IRQF_TRIGGER_MASK;
+		adapter->intr_flags = resource->flags;
 		wifi_plat_dev_probe_ret = dhd_wifi_platform_load();
 	}
 
@@ -554,7 +554,7 @@ static int dhd_wifi_platform_load_sdio(void)
 					__FUNCTION__, err));
 				return err;
 			}
-			err = wifi_platform_set_power(adapter, TRUE, 200);
+			err = wifi_platform_set_power(adapter, TRUE, WIFI_TURNON_DELAY);
 			if (err) {
 				/* WL_REG_ON state unknown, Power off forcely */
 				wifi_platform_set_power(adapter, FALSE, WIFI_TURNOFF_DELAY);
@@ -573,17 +573,7 @@ static int dhd_wifi_platform_load_sdio(void)
 			DHD_ERROR(("failed to power up %s, %d retry left\n", adapter->name, retry));
 			dhd_bus_unreg_sdio_notify();
 			wifi_platform_set_power(adapter, FALSE, WIFI_TURNOFF_DELAY);
-
-#if !defined(CONFIG_MACH_KLTE_ATT) && !defined(CONFIG_MACH_KLTE_VZW) &&\
-    !defined(CONFIG_MACH_KLTE_SPR) && !defined(CONFIG_MACH_KLTE_TMO) &&\
-    !defined(CONFIG_MACH_KLTE_USC) && !defined(CONFIG_MACH_K3GDUOS_CTC) &&\
-    !defined(CONFIG_MACH_VIENNAATT) && !defined(CONFIG_MACH_KLTE_KOR) &&\
-    !defined(CONFIG_MACH_KLTE_JPN) && !defined(CONFIG_MACH_KLTE_EUR) &&\
-    !defined(CONFIG_MACH_KLTE_CAN) && !defined(CONFIG_MACH_KACTIVELTE_EUR) &&\
-    !defined(CONFIG_MACH_KACTIVELTE_ATT)
-
 			wifi_platform_bus_enumerate(adapter, FALSE);
-#endif
 		} while (retry--);
 
 		if (!chip_up) {

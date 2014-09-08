@@ -50,7 +50,7 @@ static void enable_sensor(struct ssp_data *data,
 
 	switch (data->aiCheckStatus[iSensorType]) {
 	case ADD_SENSOR_STATE:
-		ssp_dbg("[SSP]: %s - add %u, New = %lldns\n",
+		pr_debug("[SSP]: %s - add %u, New = %lldns\n",
 			 __func__, 1 << iSensorType, dNewDelay);
 
 		memcpy(&uBuf[0], &dMsDelay, 4);
@@ -72,7 +72,6 @@ static void enable_sensor(struct ssp_data *data,
 			atomic_set(&data->aSensorEnable, uNewEnable);
 
 			data->aiCheckStatus[iSensorType] = NO_SENSOR_STATE;
-			data->uMissSensorCnt++;
 			break;
 		}
 
@@ -81,6 +80,7 @@ static void enable_sensor(struct ssp_data *data,
 		if (iSensorType == PROXIMITY_SENSOR) {
 			proximity_open_lcd_ldi(data);
 			proximity_open_calibration(data);
+			set_proximity_threshold(data, data->uProxHiThresh, data->uProxLoThresh);
 
 			input_report_abs(data->prox_input_dev, ABS_DISTANCE, 1);
 			input_sync(data->prox_input_dev);
@@ -91,7 +91,7 @@ static void enable_sensor(struct ssp_data *data,
 			== get_msdelay(data->adDelayBuf[iSensorType]))
 			break;
 
-		ssp_dbg("[SSP]: %s - Change %u, New = %lldns\n",
+		pr_debug("[SSP]: %s - Change %u, New = %lldns\n",
 			__func__, 1 << iSensorType, dNewDelay);
 
 		memcpy(&uBuf[0], &dMsDelay, 4);
@@ -147,7 +147,7 @@ static int ssp_remove_sensor(struct ssp_data *data,
 {
 	u8 uBuf[4];
 	int64_t dSensorDelay = data->adDelayBuf[uChangedSensor];
-	ssp_dbg("[SSP]: %s - remove sensor = %d, current state = %d\n",
+	pr_debug("[SSP]: %s - remove sensor = %d, current state = %d\n",
 		__func__, (1 << uChangedSensor), uNewEnable);
 
 	data->adDelayBuf[uChangedSensor] = DEFUALT_POLLING_DELAY;
@@ -225,7 +225,7 @@ static ssize_t show_sensors_enable(struct device *dev,
 {
 	struct ssp_data *data = dev_get_drvdata(dev);
 
-	ssp_dbg("[SSP]: %s - cur_enable = %d\n", __func__,
+	pr_debug("[SSP]: %s - cur_enable = %d\n", __func__,
 		 atomic_read(&data->aSensorEnable));
 
 	return sprintf(buf, "%9u\n", atomic_read(&data->aSensorEnable));
@@ -245,6 +245,13 @@ static ssize_t set_sensors_enable(struct device *dev,
 	uNewEnable = (unsigned int)dTemp;
 	ssp_dbg("[SSP]: %s - new_enable = %u, old_enable = %u\n", __func__,
 		 uNewEnable, atomic_read(&data->aSensorEnable));
+
+	if ((uNewEnable != atomic_read(&data->aSensorEnable)) &&
+		!(data->uSensorState & (uNewEnable - atomic_read(&data->aSensorEnable)))) {
+		pr_info("[SSP] %s - %u is not connected(sensortate: 0x%x)\n",
+			__func__, uNewEnable - atomic_read(&data->aSensorEnable), data->uSensorState);
+		return -EINVAL;
+	}
 
 	if (uNewEnable == atomic_read(&data->aSensorEnable))
 		return size;
@@ -275,6 +282,7 @@ static ssize_t set_sensors_enable(struct device *dev,
 					else if (uChangedSensor == PROXIMITY_SENSOR) {
 						proximity_open_lcd_ldi(data);
 						proximity_open_calibration(data);
+						set_proximity_threshold(data, data->uProxHiThresh, data->uProxLoThresh);
 					}
 				}
 				data->aiCheckStatus[uChangedSensor] = ADD_SENSOR_STATE;
@@ -689,7 +697,8 @@ static DEVICE_ATTR(game_rot_poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
 	show_game_rot_delay, set_game_rot_delay);
 static DEVICE_ATTR(step_det_poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
 	show_step_det_delay, set_step_det_delay);
-
+static DEVICE_ATTR(pressure_poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
+	show_pressure_delay, set_pressure_delay);
 static DEVICE_ATTR(accel_poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
 	show_acc_delay, set_acc_delay);
 static DEVICE_ATTR(gyro_poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
@@ -702,9 +711,6 @@ static struct device_attribute dev_attr_mag_poll_delay
 static struct device_attribute dev_attr_uncal_mag_poll_delay
 	= __ATTR(poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
 	show_uncal_mag_delay, set_uncal_mag_delay);
-static struct device_attribute dev_attr_pressure_poll_delay
-	= __ATTR(poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
-	show_pressure_delay, set_pressure_delay);
 static struct device_attribute dev_attr_gesture_poll_delay
 	= __ATTR(poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
 	show_gesture_delay, set_gesture_delay);
@@ -744,7 +750,7 @@ static struct device_attribute *mcu_attrs[] = {
 	&dev_attr_rot_poll_delay,
 	&dev_attr_game_rot_poll_delay,
 	&dev_attr_step_det_poll_delay,
-	&dev_attr_step_cnt_poll_delay,
+	&dev_attr_pressure_poll_delay,
 	&dev_attr_ssp_flush,
 	NULL,
 };
@@ -851,10 +857,6 @@ static void remove_mcu_factorytest(struct ssp_data *data)
 
 int initialize_sysfs(struct ssp_data *data)
 {
-	if (device_create_file(&data->pressure_input_dev->dev,
-		&dev_attr_pressure_poll_delay))
-		goto err_pressure_input_dev;
-
 	if (device_create_file(&data->gesture_input_dev->dev,
 		&dev_attr_gesture_poll_delay))
 		goto err_gesture_input_dev;
@@ -943,17 +945,12 @@ err_light_input_dev:
 	device_remove_file(&data->gesture_input_dev->dev,
 		&dev_attr_gesture_poll_delay);
 err_gesture_input_dev:
-	device_remove_file(&data->pressure_input_dev->dev,
-		&dev_attr_pressure_poll_delay);
-err_pressure_input_dev:
 	pr_err("[SSP] error init sysfs");
 	return ERROR;
 }
 
 void remove_sysfs(struct ssp_data *data)
 {
-	device_remove_file(&data->pressure_input_dev->dev,
-		&dev_attr_pressure_poll_delay);
 	device_remove_file(&data->gesture_input_dev->dev,
 		&dev_attr_gesture_poll_delay);
 	device_remove_file(&data->light_input_dev->dev,

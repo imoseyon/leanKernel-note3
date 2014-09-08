@@ -347,7 +347,10 @@ static int msm_pcm_ioctl(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-#if defined(CONFIG_SND_SOC_ES325) && !defined(CONFIG_SEC_LOCALE_KOR_H)
+#ifdef CONFIG_SND_SOC_ES705
+int es705_put_veq_block(int volume);
+#endif
+#if defined(CONFIG_SND_SOC_ES325) || defined (CONFIG_SND_SOC_ES325_ATLANTIC) && !defined(CONFIG_SEC_LOCALE_KOR_H) && !defined(CONFIG_SEC_LOCALE_KOR_FRESCO)
 int es325_set_VEQ_max_gain(int volume);
 #endif
 static int msm_voice_gain_put(struct snd_kcontrol *kcontrol,
@@ -398,7 +401,13 @@ static int msm_voice_gain_put(struct snd_kcontrol *kcontrol,
 
 	voc_set_rx_vol_step(session_id, RX_PATH, volume, ramp_duration);
 #endif
-#if defined(CONFIG_SND_SOC_ES325) && !defined(CONFIG_SEC_LOCALE_KOR_H)
+
+#ifdef CONFIG_SND_SOC_ES705
+#if !defined(CONFIG_MACH_KLTE_KOR)
+	es705_put_veq_block(volume);
+#endif
+#endif
+#if defined(CONFIG_SND_SOC_ES325) || defined (CONFIG_SND_SOC_ES325_ATLANTIC) && !defined(CONFIG_SEC_LOCALE_KOR_H) && !defined(CONFIG_SEC_LOCALE_KOR_FRESCO) && !defined(CONFIG_SEC_JACTIVE_PROJECT)
 	es325_set_VEQ_max_gain(volume);
 #endif
 done:
@@ -530,14 +539,31 @@ static int msm_sec_dha_put(struct snd_kcontrol *kcontrol,
 
 	int dha_mode = ucontrol->value.integer.value[0];
 	int dha_select = ucontrol->value.integer.value[1];
+#if defined(CONFIG_AUDIO_DUAL_CP) || defined(CONFIG_MACH_KLTE_CTC) \
+	|| defined(CONFIG_MACH_KLTE_CMCCDUOS) || defined(CONFIG_MACH_KLTE_CUDUOS) \
+	|| defined(CONFIG_MACH_MEGA23GEUR_OPEN)  || defined(CONFIG_MACH_MS01_EUR_3G) \
+	|| defined(CONFIG_MACH_MEGA2LTE_KTT) || defined(CONFIG_MACH_ATLANTIC3GEUR_OPEN) \
+	|| defined(CONFIG_MACH_MS01_EUR_LTE)
+	uint32_t session_id = ucontrol->value.integer.value[14];
+#endif
 	short dha_param[12] = {0,};
 	for (i = 0; i < 12; i++) {
 		dha_param[i] = (short)ucontrol->value.integer.value[2+i];
 		pr_debug("msm_dha_put : param - %d\n", dha_param[i]);
 	}
 
+#if defined(CONFIG_AUDIO_DUAL_CP) || defined(CONFIG_MACH_KLTE_CTC) \
+	|| defined(CONFIG_MACH_KLTE_CMCCDUOS) || defined(CONFIG_MACH_KLTE_CUDUOS) \
+	|| defined(CONFIG_MACH_MEGA23GEUR_OPEN) || defined(CONFIG_MACH_MS01_EUR_3G) \
+	|| defined(CONFIG_MACH_MEGA2LTE_KTT) || defined(CONFIG_MACH_ATLANTIC3GEUR_OPEN) \
+	|| defined(CONFIG_MACH_MS01_EUR_LTE)
+	pr_info("%s: session_id=%#x\n", __func__, session_id);
+	return voice_sec_set_dha_data(session_id,
+		dha_mode, dha_select, dha_param);
+#else
 	return voice_sec_set_dha_data(voc_get_session_id(VOICE_SESSION_NAME),
 		dha_mode, dha_select, dha_param);
+#endif
 }
 #endif /*CONFIG_SEC_DHA_SOL_MAL*/
 
@@ -562,8 +588,17 @@ static struct snd_kcontrol_new msm_voice_controls[] = {
 	SOC_SINGLE_MULTI_EXT("Slowtalk Enable", SND_SOC_NOPM, 0, VSID_MAX, 0, 2,
 				msm_voice_slowtalk_get, msm_voice_slowtalk_put),
 #ifdef CONFIG_SEC_DHA_SOL_MAL
+#if defined(CONFIG_AUDIO_DUAL_CP) || defined(CONFIG_MACH_KLTE_CTC) \
+	|| defined(CONFIG_MACH_KLTE_CMCCDUOS) || defined(CONFIG_MACH_KLTE_CUDUOS) \
+	|| defined(CONFIG_MACH_MEGA23GEUR_OPEN) || defined(CONFIG_MACH_MS01_EUR_3G) \
+	|| defined(CONFIG_MACH_MEGA2LTE_KTT) || defined(CONFIG_MACH_ATLANTIC3GEUR_OPEN) \
+	|| defined(CONFIG_MACH_MS01_EUR_LTE)
+	SOC_SINGLE_MULTI_EXT("Sec Set DHA data", SND_SOC_NOPM, 0, VSID_MAX, 0, 15,
+				msm_sec_dha_get, msm_sec_dha_put),
+#else
 	SOC_SINGLE_MULTI_EXT("Sec Set DHA data", SND_SOC_NOPM, 0, 65535, 0, 14,
 				msm_sec_dha_get, msm_sec_dha_put),
+#endif
 #endif	/* CONFIG_SEC_DHA_SOL_MAL */
 	SOC_SINGLE_EXT("Loopback Enable", SND_SOC_NOPM, 0, 1, 0,
 				msm_loopback_get, msm_loopback_put),

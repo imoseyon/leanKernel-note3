@@ -21,7 +21,8 @@
 	/* qcom,msm-id = <126 1 0>; */
 	qcom,msm-id = <0x7E01FF01 7 0>,
 				<0xB801FF01 7 0>,
-				<0xB901FF01 7 0>;
+				<0xB901FF01 7 0>,
+				<0xBA01FF01 7 0>;
 	/* [31:24] chip-id, [23:16] platform-id, [15:8] national code, [7:0] operator
 		revision, reserved */
 };

@@ -33,7 +33,7 @@
 #include <linux/device.h>
 
 /* definitions */
-#define	SEC_SIZEOF_POWER_SUPPLY_TYPE	POWER_SUPPLY_TYPE_WIRELESS_REMOVE
+#define	SEC_SIZEOF_POWER_SUPPLY_TYPE	POWER_SUPPLY_TYPE_MAX
 
 enum sec_battery_voltage_mode {
 	/* average voltage */
@@ -78,6 +78,7 @@ enum sec_battery_adc_channel {
 	SEC_BAT_ADC_CHANNEL_TEMP_AMBIENT,
 	SEC_BAT_ADC_CHANNEL_FULL_CHECK,
 	SEC_BAT_ADC_CHANNEL_VOLTAGE_NOW,
+	SEC_BAT_ADC_CHANNEL_INBAT_VOLTAGE,
 	SEC_BAT_ADC_CHANNEL_NUM
 };
 
@@ -432,6 +433,7 @@ struct sec_battery_platform_data {
 	bool use_LED;				/* use charging LED */
 
 	bool event_check;
+	bool use_wireless_to_pogo;
 	/* sustaining event after deactivated (second) */
 	unsigned int event_waiting_time;
 
@@ -471,14 +473,20 @@ struct sec_battery_platform_data {
 	 * depending on temp_check_type
 	 * temperature should be temp x 10 (0.1 degree)
 	 */
+	int temp_highlimit_threshold_event;
+	int temp_highlimit_recovery_event;
 	int temp_high_threshold_event;
 	int temp_high_recovery_event;
 	int temp_low_threshold_event;
 	int temp_low_recovery_event;
+	int temp_highlimit_threshold_normal;
+	int temp_highlimit_recovery_normal;
 	int temp_high_threshold_normal;
 	int temp_high_recovery_normal;
 	int temp_low_threshold_normal;
 	int temp_low_recovery_normal;
+	int temp_highlimit_threshold_lpm;
+	int temp_highlimit_recovery_lpm;
 	int temp_high_threshold_lpm;
 	int temp_high_recovery_lpm;
 	int temp_low_threshold_lpm;
@@ -549,6 +557,9 @@ struct sec_battery_platform_data {
 	int chg_float_voltage;
 	sec_charger_functions_t chg_functions_setting;
 
+	int siop_level;
+	bool siop_activated;
+
 	/* ADC setting */
 	unsigned int adc_check_count;
 	/* ADC type for each channel */
@@ -578,8 +589,8 @@ static inline struct power_supply *get_power_supply_by_name(char *name)
 		if (psy->function##_property != NULL) { \
 			ret = psy->function##_property(psy, (property), &(value)); \
 			if (ret < 0) {	\
-				pr_err("%s: Fail to "#name" "#function" (%d=>%d)\n", \
-						__func__, (property), ret);	\
+				pr_err("%s: Fail to %s "#function" (%d=>%d)\n", \
+						__func__, name, (property), ret);	\
 				value.intval = 0;	\
 			}	\
 		}	\

@@ -11,7 +11,36 @@
  * GNU General Public License for more details.
  */
 
+&spmi_bus {
+	qcom,pm8226@1 {
+		qcom,leds@d300 {
+			compatible = "qcom,leds-qpnp";
+			status = "okay";
+			reg = <0xd300 0x100>;
+			label = "flash";
+			flash-boost-supply = <&pm8226_chg_boost>;
+			};
+	};
+};
+
 &soc {
+	i2c@20 {
+		cell-index = <20>;
+		compatible = "i2c-gpio";
+		gpios = <&msmgpio 34 0 /* sda */
+		&msmgpio 36 0 /* scl */>;
+
+		actuator0: qcom,actuator@50 {
+			compatible = "qcom,actuator";
+			cell-index = <0>;
+			reg = <0x50>;
+		};
+		actuator1: qcom,actuator@36 {
+			compatible = "qcom,actuator";
+			cell-index = <1>;
+			reg = <0x36>;
+		};
+	};
 
 	led_flash0: qcom,camera-led-flash {
 		cell-index = <0>;

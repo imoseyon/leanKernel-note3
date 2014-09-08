@@ -272,6 +272,27 @@ void report_gesture_data(struct ssp_data *data, struct sensor_value *gesdata)
 		data->buf[GESTURE_SENSOR].data[i] = gesdata->data[i];
 	}
 
+#if defined (CONFIG_SENSORS_SSP_MAX88920)
+	input_report_abs(data->gesture_input_dev,
+		ABS_RUDDER, data->buf[GESTURE_SENSOR].data[0]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_WHEEL, data->buf[GESTURE_SENSOR].data[1]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_GAS, data->buf[GESTURE_SENSOR].data[2]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_BRAKE, data->buf[GESTURE_SENSOR].data[3]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_THROTTLE, data->buf[GESTURE_SENSOR].data[4]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_X, data->buf[GESTURE_SENSOR].data[5]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_Y, data->buf[GESTURE_SENSOR].data[6]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_Z, data->buf[GESTURE_SENSOR].data[7]);
+	input_report_abs(data->gesture_input_dev,
+		ABS_RX, data->buf[GESTURE_SENSOR].data[8]);
+
+#else
 	input_report_abs(data->gesture_input_dev,
 		ABS_X, data->buf[GESTURE_SENSOR].data[0]);
 	input_report_abs(data->gesture_input_dev,
@@ -310,7 +331,8 @@ void report_gesture_data(struct ssp_data *data, struct sensor_value *gesdata)
 		ABS_HAT3X, data->buf[GESTURE_SENSOR].data[17]);
 	input_report_abs(data->gesture_input_dev,
 		ABS_HAT3Y, data->buf[GESTURE_SENSOR].data[18]);
-	
+#endif
+
 	input_sync(data->gesture_input_dev);
 }
 
@@ -909,6 +931,27 @@ int initialize_input_dev(struct ssp_data *data)
 	input_set_capability(pressure_input_dev, EV_REL, REL_DIAL);
 	input_set_capability(pressure_input_dev, EV_REL, REL_WHEEL);
 
+#if defined (CONFIG_SENSORS_SSP_MAX88920)
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_RUDDER);
+	input_set_abs_params(gesture_input_dev, ABS_RUDDER, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_WHEEL);
+	input_set_abs_params(gesture_input_dev, ABS_WHEEL, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_GAS);
+	input_set_abs_params(gesture_input_dev, ABS_GAS, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_BRAKE);
+	input_set_abs_params(gesture_input_dev, ABS_BRAKE, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_THROTTLE);
+	input_set_abs_params(gesture_input_dev, ABS_THROTTLE, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_X);
+	input_set_abs_params(gesture_input_dev, ABS_X, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_Y);
+	input_set_abs_params(gesture_input_dev, ABS_Y, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_Z);
+	input_set_abs_params(gesture_input_dev, ABS_Z, 0, 1024, 0, 0);
+	input_set_capability(gesture_input_dev, EV_ABS, ABS_RX);
+	input_set_abs_params(gesture_input_dev, ABS_RX, 0, 1024, 0, 0);
+
+#else
 	input_set_capability(gesture_input_dev, EV_ABS, ABS_X);
 	input_set_abs_params(gesture_input_dev, ABS_X, 0, 1024, 0, 0);
 	input_set_capability(gesture_input_dev, EV_ABS, ABS_Y);
@@ -948,7 +991,7 @@ int initialize_input_dev(struct ssp_data *data)
 	input_set_abs_params(gesture_input_dev, ABS_HAT3X, 0, 1024, 0, 0);
 	input_set_capability(gesture_input_dev, EV_ABS, ABS_HAT3Y);
 	input_set_abs_params(gesture_input_dev, ABS_HAT3Y, 0, 1024, 0, 0);
-
+#endif
 
 	input_set_capability(light_input_dev, EV_REL, REL_HWHEEL);
 	input_set_capability(light_input_dev, EV_REL, REL_DIAL);

@@ -14,6 +14,61 @@
 /include/ "msm8226-camera-sensor-mtp-r03.dtsi"
 /include/ "msm8226-tsu6721.dtsi"
 
+&spmi_bus {
+	qcom,pm8226@1 {
+		qcom,leds@d300 {
+			compatible = "qcom,leds-qpnp";
+			status = "okay";
+			reg = <0xd300 0x100>;
+			label = "flash";
+			flash-boost-supply = <&pm8226_chg_boost>;
+                        pm8226_flash0: qcom,flash_0 {
+                                qcom,max-current = <1000>;
+                                qcom,default-state = "off";
+                                qcom,headroom = <3>;
+                                qcom,duration = <1280>;
+                                qcom,clamp-curr = <1000>;
+                                qcom,startup-dly = <3>;
+                                qcom,safety-timer;
+                                label = "flash";
+                                linux,default-trigger =
+                                        "flash0_trigger";
+                                qcom,id = <1>;
+                                linux,name = "led:flash_0";
+                                qcom,current = <1000>;
+                        };
+
+                        pm8226_flash1: qcom,flash_1 {
+                                qcom,max-current = <1000>;
+                                qcom,default-state = "off";
+                                qcom,headroom = <3>;
+                                qcom,duration = <1280>;
+                                qcom,clamp-curr = <1000>;
+                                qcom,startup-dly = <3>;
+                                qcom,safety-timer;
+                                linux,default-trigger =
+                                        "flash1_trigger";
+                                label = "flash";
+                                qcom,id = <2>;
+                                linux,name = "led:flash_1";
+                                qcom,current = <1000>;
+                        };
+
+				pm8226_torch: qcom,flash_torch {
+				qcom,max-current = <200>;
+				qcom,default-state = "off";
+				linux,default-trigger =
+					"torch_trigger";
+				label = "flash";
+				qcom,id = <1>;
+				linux,name = "led:flash_torch";
+				qcom,current = <145>;
+				qcom,torch-enable;
+			};
+		};
+	};
+};
+
 &soc {
 	serial@f991f000 {
 		status = "ok";
@@ -35,6 +90,25 @@
 		samsung,motor-en = <&msmgpio 111 0x00>;
 		status = "ok";
     };
+
+	i2c@20 {
+		cell-index = <20>;
+		compatible = "i2c-gpio";
+		gpios = <&msmgpio 34 0 /* sda */
+			&msmgpio 33 0 /* scl */>;
+
+		actuator0: qcom,actuator@50 {
+			compatible = "qcom,actuator";
+			cell-index = <0>;
+			reg = <0x50>;
+		};
+		actuator1: qcom,actuator@36 {
+			compatible = "qcom,actuator";
+			cell-index = <1>;
+			reg = <0x36>;
+		};
+	};
+
 	i2c@f9924000 { /* BLSP1 QUP2 */
 		mpu6500_input@68 {
 			compatible = "invensense,mpu_6500";
@@ -56,15 +130,16 @@
 			HSCDTD008-i2c,reg_vdd = "8226_l19";
 			HSCDTD008-i2c,reg_vio = "8226_lvs1";
 		};
-		gp2a030@39 {
-			compatible = "gp2a,gp2a030";
+		gp2a030a@39 {
+			compatible = "gp2a030a";
 			reg = <0x39>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <65 0>;
-			gp2a,p_out-gpio = <&msmgpio 65 0>;
-			gp2a,prox_cal_path = "/data/prox_cal";
-			gp2a,vdd_2p85 = "8226_l19";
-			gp2a,version = <1>;
+			gp2a030a,vdd_en-gpio = <&msmgpio 49 0>;
+			gp2a030a,irq_gpio = <&msmgpio 65 0>;
+			gp2a030a,prox_cal_path = "/efs/prox_cal";
+			gp2a030a,vdd_2p85 = "8226_l19";
+			gp2a030a,version = <1>;
 		};
 	};
 
@@ -97,13 +172,13 @@
 			label = "home_key";
 			gpios = <&msmgpio 108 0x1>;
 			linux,input-type = <1>;
-			linux,code = <102>;
+			linux,code = <172>;
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
 
 		vol_down {
-			lable = "volume_down";
+			label = "volume_down";
 			gpios = <&msmgpio 107 0x1>;
 			linux,input-type = <1>;
 			linux,code = <114>;
@@ -227,6 +302,7 @@
 
 &sdhc_1 {
 	vdd-supply = <&pm8226_l17>;
+	qcom,vdd-always-on;
 	qcom,vdd-voltage-level = <2950000 2950000>;
 	qcom,vdd-current-level = <800 500000>;
 

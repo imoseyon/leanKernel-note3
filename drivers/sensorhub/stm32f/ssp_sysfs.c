@@ -907,7 +907,7 @@ int initialize_sysfs(struct ssp_data *data)
 	initialize_pressure_factorytest(data);
 	initialize_magnetic_factorytest(data);
 	initialize_mcu_factorytest(data);
-#if defined (CONFIG_SENSORS_SSP_MAX88921)
+#if defined (CONFIG_SENSORS_SSP_MAX88920) || defined (CONFIG_SENSORS_SSP_MAX88921)
 	initialize_gesture_factorytest(data);
 #endif
 #ifdef CONFIG_SENSORS_SSP_SHTC1
@@ -983,7 +983,7 @@ void remove_sysfs(struct ssp_data *data)
 	remove_pressure_factorytest(data);
 	remove_magnetic_factorytest(data);
 	remove_mcu_factorytest(data);
-#ifdef CONFIG_SENSORS_SSP_MAX88920
+#if defined (CONFIG_SENSORS_SSP_MAX88920) || defined (CONFIG_SENSORS_SSP_MAX88921)
 	remove_gesture_factorytest(data);
 #endif
 #ifdef CONFIG_SENSORS_SSP_SHTC1

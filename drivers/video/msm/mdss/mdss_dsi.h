@@ -84,6 +84,7 @@ enum dsi_panel_bl_ctrl {
 	BL_PWM,
 	BL_WLED,
 	BL_DCS_CMD,
+	BL_GPIO_SWING,
 	UNKNOWN_CTRL,
 };
 
@@ -249,9 +250,12 @@ struct mdss_dsi_ctrl_pdata {
 	int ndx;	/* panel_num */
 	int (*on) (struct mdss_panel_data *pdata);
 	int (*off) (struct mdss_panel_data *pdata);
+#if defined (CONFIG_FB_MSM_MDSS_S6E8AA0A_HD_PANEL)
+	int (*mtp) (struct mdss_panel_data *pdata);
+#endif
 	int (*partial_update_fnc) (struct mdss_panel_data *pdata);
 	int (*check_status) (struct mdss_dsi_ctrl_pdata *pdata);
-	void (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
+	int (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
 	int (*registered) (struct mdss_panel_data *pdata);
 	int (*dimming_init) (struct mdss_panel_data *pdata);
 	int (*event_handler) (int e);
@@ -276,6 +280,30 @@ struct mdss_dsi_ctrl_pdata {
 	int mdss_dsi_clk_on;
 	int rst_gpio;
 	int disp_en_gpio;
+	int disp_en_gpio2;
+#if defined(CONFIG_FB_MSM_MDSS_HX8394C_TFT_VIDEO_720P_PANEL)
+	int disp_en_vsp_gpio;
+	int disp_en_vsn_gpio;
+#endif
+#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQXGA_S6TNMR7_PT_PANEL)
+	int tcon_ready_gpio;
+#endif
+#if defined(CONFIG_FB_MSM_MDSS_MAGNA_OCTA_VIDEO_720P_PANEL)
+	int lcd_crack_det;
+	int expander_enble_gpio;
+#endif
+#if defined(CONFIG_FB_MSM_MDSS_SHARP_HD_PANEL)
+	int disp_en_gpio_p;
+	int disp_en_gpio_n;
+#endif
+#if defined(CONFIG_FB_MSM_MIPI_MAGNA_OCTA_VIDEO_WXGA_PT_DUAL_PANEL)
+	int lcd_crack_det_gpio;
+	int lcd_esd_det_gpio;
+	int lcd_sel_gpio;
+	struct regulator *lcd_3p0_vreg;
+	struct regulator *lcd_1p8_vreg;
+#endif
+	int bl_on_gpio;
 	int disp_te_gpio;
 	int mode_gpio;
 	int rst_gpio_requested;
@@ -289,6 +317,9 @@ struct mdss_dsi_ctrl_pdata {
 	int bklt_max;
 	int new_fps;
 	int pwm_enabled;
+#if defined(CONFIG_CABC_TUNING_HX8394C)
+	int current_cabc_duty;
+#endif
 	struct pwm_device *pwm_bl;
 	struct dsi_drv_cm_data shared_pdata;
 	u32 pclk_rate;
@@ -304,7 +335,16 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds ce_off_cmds;
 	struct dsi_panel_cmds cabc_on_cmds;
 	struct dsi_panel_cmds cabc_off_cmds;
+#if defined(CONFIG_CABC_TUNING_HX8394C)
+	struct dsi_panel_cmds cabc_duty_72;
+	struct dsi_panel_cmds cabc_duty_74;
+	struct dsi_panel_cmds cabc_duty_78;
+	struct dsi_panel_cmds cabc_duty_82;
+#endif
 	struct dsi_panel_cmds cabc_tune_cmds;
+#if defined(CONFIG_FB_MSM_MDSS_CPT_QHD_PANEL)
+	struct dsi_panel_cmds disp_on_cmd;
+#endif
 
 
 	int dsi_on_state;
@@ -326,7 +366,34 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_buf tx_buf;
 	struct dsi_buf rx_buf;
 	int dsi_err_cnt;
+#if defined(CONFIG_FB_MSM_MDSS_TC_DSI2LVDS_WXGA_PANEL)
+	struct regulator *iovdd_vreg;
+#endif
 };
+
+#if defined(CONFIG_FB_MSM_MDSS_MDP3)
+enum {
+	MIPI_RESUME_STATE,
+	MIPI_SUSPEND_STATE,
+};
+
+struct mdss_dsi_driver_data {
+	struct msm_fb_data_type *mfd;
+	struct mdss_panel_data *pdata;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
+	struct mutex lock;
+#if defined(CONFIG_LCD_CLASS_DEVICE)
+	const char *panel_name;
+#endif
+#if defined(CONFIG_GET_LCD_ATTACHED)
+	unsigned int manufacture_id;
+	int lcd_attached;
+#endif
+};
+#if defined(CONFIG_MDNIE_LITE_TUNING)
+void mdss_dsi_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl, struct dsi_cmd_desc *cmds, int cnt);
+#endif
+#endif /* CONFIG_FB_MSM_MDSS_MDP3 */
 
 extern unsigned int gv_manufacture_id;
 int dsi_panel_device_register(struct device_node *pan_node,
@@ -338,6 +405,7 @@ int mdss_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 int mdss_dsi_cmds_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_cmd_desc *cmds, int rlen);
 
+void set_ctrl_base(struct mdss_panel_data *pdata);
 void mdss_dsi_host_init(struct mipi_panel_info *pinfo,
 				struct mdss_panel_data *pdata);
 void mdss_dsi_op_mode_config(int mode,
@@ -379,7 +447,7 @@ int mdss_dsi_cmds_single_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 void mdss_dsi_ctrl_init(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_cmd_mdp_busy(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_wait4video_done(struct mdss_dsi_ctrl_pdata *ctrl);
-void mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
+int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
 void mdss_dsi_cmdlist_kickoff(int intf);
 int mdss_dsi_bta_status_check(struct mdss_dsi_ctrl_pdata *ctrl);
 

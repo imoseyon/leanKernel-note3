@@ -44,11 +44,15 @@
 const char *extcon_cable_name[] = {
 	[EXTCON_USB]		= "USB",
 	[EXTCON_USB_HOST]	= "USB-Host",
+	[EXTCON_USB_HOST_5V]	= "USB-Host-5V",
 	[EXTCON_TA]		= "TA",
 	[EXTCON_CEA936_CHG]	= "CEA936",
 	[EXTCON_FAST_CHARGER]	= "Fast-charger",
 	[EXTCON_SLOW_CHARGER]	= "Slow-charger",
 	[EXTCON_CHARGE_DOWNSTREAM]	= "Charge-downstream",
+#if defined(CONFIG_MUIC_DET_JACK)
+	[EXTCON_EARJACK]	= "Earjack",
+#endif
 	[EXTCON_MHL]		= "MHL",
 	[EXTCON_MHL_VB]		= "MHL-VB",
 	[EXTCON_LINE_OUT]	= "Line-out",
@@ -66,6 +70,14 @@ const char *extcon_cable_name[] = {
 	[EXTCON_JIG_USBOFF]	= "JIG-USB-OFF",
 	[EXTCON_JIG_USBON]	= "JIG-USB-ON",
 	[EXTCON_INCOMPATIBLE]	= "Incompatible-TA",
+	[EXTCON_CHARGING_CABLE]	= "Charging-Cable",
+#if defined(CONFIG_MUIC_MAX77804K_SUPPORT_HMT_DETECTION)
+	[EXTCON_HMT]	= "HMT",
+#endif
+#if defined(CONFIG_MUIC_MAX77804K_SUPPORT_LANHUB)
+	[EXTCON_LANHUB]		= "Lan-Hub",
+	[EXTCON_LANHUB_TA]	= "Lan-Hub-TA",
+#endif
 	NULL,
 };
 

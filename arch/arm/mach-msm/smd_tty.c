@@ -39,7 +39,7 @@
 #define MODULE_NAME "msm_smdtty"
 #define MAX_SMD_TTYS 37
 #define MAX_TTY_BUF_SIZE 2048
-#define TTY_PUSH_WS_DELAY 500
+#define TTY_PUSH_WS_DELAY 3000
 #define MAX_RA_WAKE_LOCK_NAME_LEN 32
 #define SMD_TTY_PROBE_WAIT_TIMEOUT 3000
 #define SMD_TTY_LOG_PAGES 2
@@ -822,6 +822,9 @@ static int smd_tty_core_init(void)
 			 */
 			legacy_ds |= (cpu_is_msm8x60() || soc_class_is_msm8974()) &&
 					(socinfo_get_platform_subtype() == 0x0);
+
+			/* Samsung request for all project */
+			legacy_ds = 1;
 
 			if (!legacy_ds)
 				continue;

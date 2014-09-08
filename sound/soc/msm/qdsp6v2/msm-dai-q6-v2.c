@@ -575,8 +575,7 @@ static int msm_dai_q6_slim_bus_hw_params(struct snd_pcm_hw_params *params,
 	dai_data->port_config.slim_sch.sb_cfg_minor_version =
 				AFE_API_VERSION_SLIMBUS_CONFIG;
 	dai_data->port_config.slim_sch.data_format = 0;
-	/* For Audience 3mic, temporary blocked */
-	/*dai_data->port_config.slim_sch.num_channels = dai_data->channels;*/
+	dai_data->port_config.slim_sch.num_channels = dai_data->channels;
 	dai_data->port_config.slim_sch.sample_rate = dai_data->rate;
 
 	dev_dbg(dai->dev, "%s:slimbus_dev_id[%hu] bit_wd[%hu] format[%hu]\n"
@@ -1206,6 +1205,7 @@ static int __devinit msm_auxpcm_dev_probe(struct platform_device *pdev)
 	return rc;
 
 fail_reg_dai:
+	mutex_destroy(&dai_data->rlock);
 fail_invalid_intf:
 fail_nodev_intf:
 fail_invalid_dt:

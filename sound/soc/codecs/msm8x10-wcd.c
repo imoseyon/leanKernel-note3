@@ -1396,7 +1396,10 @@ static int msm8x10_wcd_put_dec_enum(struct snd_kcontrol *kcontrol,
 	switch (decimator) {
 	case 1:
 	case 2:
-			adc_dmic_sel = 0x0;
+			if ((dec_mux == 3) || (dec_mux == 4))
+				adc_dmic_sel = 0x1;
+			else
+				adc_dmic_sel = 0x0;
 		break;
 	default:
 		dev_err(codec->dev, "%s: Invalid Decimator = %u\n",
@@ -1537,6 +1540,25 @@ static int msm8x10_wcd_codec_enable_spk_pa(struct snd_soc_dapm_widget *w,
 				     struct snd_kcontrol *kcontrol, int event)
 {
 	dev_dbg(w->codec->dev, "%s %d %s\n", __func__, event, w->name);
+
+#if defined(CONFIG_MACH_KANAS3G_CTC)
+	switch (event) {
+		case SND_SOC_DAPM_PRE_PMU:
+			dev_dbg(w->codec->dev, "Before power on PA,sleep 5 ms\n");
+			msleep(15);
+		break;
+
+		case SND_SOC_DAPM_POST_PMD:
+			dev_dbg(w->codec->dev, "after power down PA,sleep 5 ms\n");
+			msleep(15);
+		break;
+
+		default:
+
+		break;
+	}
+#endif
+	
 	return 0;
 }
 
@@ -2297,7 +2319,7 @@ static const struct snd_soc_dapm_widget msm8x10_wcd_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("EAR"),
 
 	SND_SOC_DAPM_PGA_E("EAR PA", MSM8X10_WCD_A_RX_EAR_EN, 4, 0, NULL, 0,
-			msm8x10_wcd_codec_enable_ear_pa, SND_SOC_DAPM_POST_PMU),
+			msm8x10_wcd_codec_enable_ear_pa, SND_SOC_DAPM_POST_PMU|SND_SOC_DAPM_POST_PMD|SND_SOC_DAPM_PRE_PMU),
 
 	SND_SOC_DAPM_MIXER("DAC1", MSM8X10_WCD_A_RX_EAR_EN, 6, 0, dac1_switch,
 		ARRAY_SIZE(dac1_switch)),

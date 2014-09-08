@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,7 +24,7 @@
 #define DISABLE_LOG_MASK	0
 #define MAX_EVENT_SIZE		512
 #define DCI_CLIENT_INDEX_INVALID -1
-#define DCI_PKT_REQ_MIN_LEN		8
+#define DCI_PKT_REQ_MIN_LEN		5
 #define DCI_LOG_CON_MIN_LEN		14
 #define DCI_EVENT_CON_MIN_LEN		16
 
@@ -42,17 +42,21 @@
 #define DCI_MAX_LOG_CODES		16
 #define DCI_MAX_ITEMS_PER_LOG_CODE	512
 
+#define MIN_DELAYED_RSP_LEN		12
+
 extern unsigned int dci_max_reg;
 extern unsigned int dci_max_clients;
 extern struct mutex dci_health_mutex;
 
-struct dci_pkt_req_tracking_tbl {
+struct dci_pkt_req_entry_t {
 	int pid;
 	int uid;
 	int tag;
-};
+	struct list_head track;
+} __packed;
 
 struct diag_dci_client_tbl {
+	uint32_t client_id;
 	struct task_struct *client;
 	uint16_t list; /* bit mask */
 	int signal_type;
@@ -71,6 +75,7 @@ struct diag_dci_client_tbl {
 
 /* This is used for DCI health stats */
 struct diag_dci_health_stats {
+	int client_id;
 	int dropped_logs;
 	int dropped_events;
 	int received_logs;
@@ -115,23 +120,23 @@ void diag_dci_notify_client(int peripheral_mask, int data);
 int diag_process_smd_dci_read_data(struct diag_smd_info *smd_info, void *buf,
 								int recd_bytes);
 int diag_process_dci_transaction(unsigned char *buf, int len);
-int diag_send_dci_pkt(struct diag_master_table entry, unsigned char *buf,
-							 int len, int index);
 void extract_dci_pkt_rsp(struct diag_smd_info *smd_info, unsigned char *buf);
+
+int diag_dci_find_client_index_health(int client_id);
 int diag_dci_find_client_index(int client_id);
 /* DCI Log streaming functions */
 void create_dci_log_mask_tbl(unsigned char *tbl_buf);
 void update_dci_cumulative_log_mask(int offset, unsigned int byte_index,
 						uint8_t byte_mask);
 void clear_client_dci_cumulative_log_mask(int client_index);
-int diag_send_dci_log_mask(smd_channel_t *ch);
+int diag_send_dci_log_mask(struct diag_smd_info *smd_info);
 void extract_dci_log(unsigned char *buf);
 int diag_dci_clear_log_mask(void);
 int diag_dci_query_log_mask(uint16_t log_code);
 /* DCI event streaming functions */
 void update_dci_cumulative_event_mask(int offset, uint8_t byte_mask);
 void clear_client_dci_cumulative_event_mask(int client_index);
-int diag_send_dci_event_mask(smd_channel_t *ch);
+int diag_send_dci_event_mask(struct diag_smd_info *smd_info);
 void extract_dci_events(unsigned char *buf);
 void create_dci_event_mask_tbl(unsigned char *tbl_buf);
 int diag_dci_clear_event_mask(void);

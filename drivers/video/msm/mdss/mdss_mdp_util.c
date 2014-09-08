@@ -130,12 +130,16 @@ irqreturn_t mdss_mdp_isr(int irq, void *ptr)
 
 
 	isr = MDSS_MDP_REG_READ(MDSS_MDP_REG_INTR_STATUS);
+	mask = MDSS_MDP_REG_READ(MDSS_MDP_REG_INTR_EN);
+
+#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
+	xlog(__func__, 0, isr, mask, 0, 0, 0);
+#endif
 
 	if (isr == 0)
 		goto mdp_isr_done;
 
 
-	mask = MDSS_MDP_REG_READ(MDSS_MDP_REG_INTR_EN);
 	MDSS_MDP_REG_WRITE(MDSS_MDP_REG_INTR_CLEAR, isr);
 
 	pr_debug("%s: isr=%x mask=%x\n", __func__, isr, mask);

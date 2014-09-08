@@ -1335,7 +1335,7 @@ static int msm_compr_set_metadata(struct snd_compr_stream *cstream,
 		return -EINVAL;
 
 	prtd = cstream->runtime->private_data;
-	if (!prtd && !prtd->audio_client)
+	if (!prtd->audio_client && !prtd)
 		return -EINVAL;
 	ac = prtd->audio_client;
 	if (metadata->key == SNDRV_COMPRESS_ENCODER_PADDING) {
@@ -1608,7 +1608,7 @@ static int msm_compr_add_audio_effects_control(struct snd_soc_pcm_runtime *rtd)
 
 	fe_audio_effects_config_control[0].name = mixer_str;
 	fe_audio_effects_config_control[0].private_value = rtd->dai_link->be_id;
-	pr_debug("Registering new mixer ctl %s", mixer_str);
+	pr_debug("Registering new mixer ctl %s\n", mixer_str);
 	snd_soc_add_platform_controls(rtd->platform,
 				fe_audio_effects_config_control,
 				ARRAY_SIZE(fe_audio_effects_config_control));

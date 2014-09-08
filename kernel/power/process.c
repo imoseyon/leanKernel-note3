@@ -102,8 +102,9 @@ static int try_to_freeze_tasks(bool user_only)
 		 */
 		if(wakeup) {
 			printk("\n");
-			printk(KERN_ERR "Freezing of %s aborted (%s)\n",
-					user_only ? "user space " : "tasks ", q ? q->comm : "NONE");
+			printk(KERN_ERR "Freezing of %s aborted (%d) (%s)\n",
+					user_only ? "user space " : "tasks ",
+					q ? q->pid : 0, q ? q->comm : "NONE");
 		}
 		else {
 			printk("\n");

@@ -39,6 +39,10 @@
 #include <mach/mpm.h>
 #include <mach/clk.h>
 #include <mach/rpm-regulator-smd.h>
+#include <linux/mutex.h>
+
+static DEFINE_MUTEX(enable_xo_mutex);
+
 
 enum {
 	MSM_MPM_GIC_IRQ_DOMAIN,
@@ -531,7 +535,9 @@ void msm_mpm_enter_sleep(uint32_t sclk_count, bool from_idle,
 void msm_mpm_exit_sleep(bool from_idle)
 {
 	unsigned long pending;
-	uint32_t *enabled_intr;
+#ifdef CONFIG_SEC_KANAS_PROJECT
+	unsigned long enabled_intr;
+#endif
 	int i;
 	int k;
 
@@ -545,8 +551,10 @@ void msm_mpm_exit_sleep(bool from_idle)
 
 	for (i = 0; i < MSM_MPM_REG_WIDTH; i++) {
 		pending = msm_mpm_read(MSM_MPM_REG_STATUS, i);
-		pending &= enabled_intr[i];
-
+#ifdef CONFIG_SEC_KANAS_PROJECT
+		enabled_intr = msm_mpm_read(MSM_MPM_REG_ENABLE, i);
+		pending &= enabled_intr;
+#endif
 		if (MSM_MPM_DEBUG_PENDING_IRQ & msm_mpm_debug_mask)
 			pr_info("%s: enabled_intr pending.%d: 0x%08x 0x%08lx\n",
 				__func__, i, enabled_intr[i], pending);
@@ -573,9 +581,8 @@ void msm_mpm_exit_sleep(bool from_idle)
 }
 static void msm_mpm_sys_low_power_modes(bool allow)
 {
-	static DEFINE_MUTEX(enable_xo_mutex);
-
 	mutex_lock(&enable_xo_mutex);
+
 	if (allow) {
 		if (xo_enabled) {
 			clk_disable_unprepare(xo_clk);
@@ -664,6 +671,7 @@ static int __devinit msm_mpm_dev_probe(struct platform_device *pdev)
 	dev->mpm_apps_ipc_reg = devm_ioremap(&pdev->dev, res->start,
 					resource_size(res));
 	if (!dev->mpm_apps_ipc_reg) {
+		devm_iounmap(&pdev->dev, dev->mpm_request_reg_base);
 		pr_err("%s(): Unable to iomap IPC register\n", __func__);
 		return -EADDRNOTAVAIL;
 	}
@@ -680,14 +688,21 @@ static int __devinit msm_mpm_dev_probe(struct platform_device *pdev)
 
 	if (dev->mpm_ipc_irq == -ENXIO) {
 		pr_info("%s(): Cannot find IRQ resource\n", __func__);
+		devm_iounmap(&pdev->dev, dev->mpm_apps_ipc_reg);
+		devm_iounmap(&pdev->dev, dev->mpm_request_reg_base);
 		return -ENXIO;
 	}
+#if defined(CONFIG_MACH_S3VE3G_EUR)
 	ret = devm_request_irq(&pdev->dev, dev->mpm_ipc_irq, msm_mpm_irq,
-			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND, pdev->name,
-			msm_mpm_irq);
-
+			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND, pdev->name, msm_mpm_irq);
+#else
+	ret = devm_request_irq(&pdev->dev, dev->mpm_ipc_irq, msm_mpm_irq,
+			IRQF_TRIGGER_RISING, pdev->name, msm_mpm_irq);
+#endif
 	if (ret) {
 		pr_info("%s(): request_irq failed errno: %d\n", __func__, ret);
+		devm_iounmap(&pdev->dev, dev->mpm_apps_ipc_reg);
+		devm_iounmap(&pdev->dev, dev->mpm_request_reg_base);
 		return ret;
 	}
 	ret = irq_set_irq_wake(dev->mpm_ipc_irq, 1);

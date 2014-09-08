@@ -1077,7 +1077,7 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	struct fb_event event;
 	void __user *argp = (void __user *)arg;
 	long ret = 0;
-	__DLOG__(info->node,cmd);
+	__DLOG__("Node: %x CMD: %x\n",info->node,cmd);
 	switch (cmd) {
 	case FBIOGET_VSCREENINFO:
 		if (!lock_fb_info(info))
@@ -1195,7 +1195,7 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		else
 			ret = -ENOTTY;
 	}
-	__DLOG__(info->node,cmd,FUNC_END);
+	__DLOG__("Node: %x CMD: %x END: %x\n",info->node,cmd,FUNC_END);
 	return ret;
 }
 

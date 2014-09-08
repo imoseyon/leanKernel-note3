@@ -17,3 +17,4 @@
 /include/ "dsi-panel-hx8379a-wvga-video.dtsi"
 /include/ "dsi-panel-hx8389b-qhd-video.dtsi"
 /include/ "dsi-panel-ili9806b-wvga-cmd.dtsi"
+/include/ "dsi-panel-nt35502-wvga-video.dtsi"

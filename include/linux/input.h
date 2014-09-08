@@ -167,6 +167,7 @@ struct input_keymap_entry {
 #define INPUT_PROP_DIRECT		0x01	/* direct input devices */
 #define INPUT_PROP_BUTTONPAD		0x02	/* has button(s) under pad */
 #define INPUT_PROP_SEMI_MT		0x03	/* touch rectangle only */
+#define INPUT_PROP_NO_DUMMY_RELEASE	0x04	/* no dummy event */
 
 #define INPUT_PROP_MAX			0x1f
 #define INPUT_PROP_CNT			(INPUT_PROP_MAX + 1)
@@ -411,6 +412,7 @@ struct input_keymap_entry {
 #define KEY_F23			193
 #define KEY_F24			194
 
+#define KEY_VOICE_WAKEUP_LPSD	198	/* Samsung Voice Wakeup LPSD - Baby cry */
 #define KEY_VOICE_WAKEUP	199	/* Samsung Voice Wakeup */
 #define KEY_PLAYCD		200
 #define KEY_PAUSECD		201
@@ -474,8 +476,9 @@ struct input_keymap_entry {
 #define KEY_DUMMY_HOME1		249	/* Dummy Touchkey : HOME1*/
 #define KEY_DUMMY_HOME2		250	/* Dummy Touchkey : HOME2*/
 #define KEY_DUMMY_MENU		251	/* Dummy Touchkey : MENU*/
+#define KEY_ACTIVITY_MENU	252	/* Activity menu key*/
 #define KEY_DUMMY_BACK		253	/* Dummy Touchkey : BACK*/
-#define KEY_RECENT	254	/* Key recent */
+#define KEY_RECENT		254	/* Key recent */
 
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
@@ -895,6 +898,7 @@ struct input_keymap_entry {
 #define SW_LEFT_HAND	0x17	/* set = left hand*/
 #define SW_RIGHT_HAND	0x18	/* set = right hand*/
 #define SW_BOTH_HAND	0x19	/* set = both hand*/
+#define SW_W1			0x1A  /* set = w1_slave */
 
 #define SW_MAX			0x20
 #define SW_CNT			(SW_MAX+1)

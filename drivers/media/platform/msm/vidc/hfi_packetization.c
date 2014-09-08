@@ -565,7 +565,7 @@ int create_pkt_cmd_session_parse_seq_header(
 		u32 session_id, struct vidc_seq_hdr *seq_hdr)
 {
 	int rc = 0;
-	if (!pkt || !session_id || seq_hdr)
+	if (!pkt || !session_id || !seq_hdr)
 		return -EINVAL;
 
 	pkt->size = sizeof(struct hfi_cmd_session_parse_sequence_header_packet);
@@ -1403,6 +1403,22 @@ int create_pkt_cmd_session_set_property(
 		hfi = (struct hfi_enable *) &pkt->rg_property_data[1];
 		hfi->enable = ((struct hfi_enable *) pdata)->enable;
 		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_PARAM_VPE_COLOR_SPACE_CONVERSION:
+	{
+		struct hfi_vpe_color_space_conversion *hfi = NULL;
+		struct hal_vpe_color_space_conversion *hal = pdata;
+		pkt->rg_property_data[0] =
+				HFI_PROPERTY_PARAM_VPE_COLOR_SPACE_CONVERSION;
+		hfi = (struct hfi_vpe_color_space_conversion *)
+			&pkt->rg_property_data[1];
+		*hfi = *(struct hfi_vpe_color_space_conversion *) hal;
+		pkt->size += sizeof(u32) +
+				sizeof(struct hal_vpe_color_space_conversion);
+
+		dprintk(VIDC_DBG, "%s HAL_PARAM_VPE_COLOR_SPACE_CONVERSION\n",
+				__func__);
 		break;
 	}
 	/* FOLLOWING PROPERTIES ARE NOT IMPLEMENTED IN CORE YET */

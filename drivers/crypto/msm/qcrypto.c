@@ -3653,7 +3653,9 @@ static int  _qcrypto_probe(struct platform_device *pdev)
 	crypto_init_queue(&cp->queue, 50);
 	cp->qce = handle;
 	cp->pdev = pdev;
-	qce_hw_support(cp->qce, &cp->ce_support);
+	rc = qce_hw_support(cp->qce, &cp->ce_support);
+	if(rc < 0)
+		return rc;
 	if (cp->ce_support.bam)	 {
 		cp->platform_support.ce_shared = cp->ce_support.is_shared;
 		cp->platform_support.shared_ce_resource = 0;

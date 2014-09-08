@@ -91,6 +91,7 @@ static int msm_csiphy_lane_config(struct csiphy_device *csiphy_dev,
 		msm_camera_io_w(0x10, csiphybase + MIPI_CSIPHY_LNCK_CFG2_ADDR);
 		msm_camera_io_w(csiphy_params->settle_cnt,
 			 csiphybase + MIPI_CSIPHY_LNCK_CFG3_ADDR);
+		msm_camera_io_w(0xff, csiphybase + MIPI_CSIPHY_LNCK_CFG4_ADDR);
 		msm_camera_io_w(0x24,
 			csiphybase + MIPI_CSIPHY_INTERRUPT_MASK0_ADDR);
 		msm_camera_io_w(0x24,
@@ -102,6 +103,7 @@ static int msm_csiphy_lane_config(struct csiphy_device *csiphy_dev,
 		msm_camera_io_w(csiphy_params->combo_mode <<
 			MIPI_CSIPHY_MODE_CONFIG_SHIFT,
 			csiphybase + MIPI_CSIPHY_GLBL_RESET_ADDR);
+		msm_camera_io_w(0xff, csiphybase + MIPI_CSIPHY_LNCK_CFG4_ADDR);
 	}
 
 	lane_mask &= 0x1f;
@@ -119,6 +121,10 @@ static int msm_csiphy_lane_config(struct csiphy_device *csiphy_dev,
 			MIPI_CSIPHY_INTERRUPT_MASK_ADDR + 0x4*j);
 		msm_camera_io_w(MIPI_CSIPHY_INTERRUPT_MASK_VAL, csiphybase +
 			MIPI_CSIPHY_INTERRUPT_CLEAR_ADDR + 0x4*j);
+
+		if (csiphy_dev->hw_version == CSIPHY_VERSION_V3) 
+		msm_camera_io_w(0xff, csiphybase + MIPI_CSIPHY_LNn_CFG4_ADDR+0x40*j); 
+        
 		j++;
 		lane_mask >>= 1;
 	}

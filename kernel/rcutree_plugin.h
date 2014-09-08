@@ -1978,11 +1978,20 @@ static void rcu_prepare_for_idle(int cpu)
 #define RCU_IDLE_GP_DELAY 6		/* Roughly one grace period. */
 #define RCU_IDLE_LAZY_GP_DELAY (6 * HZ)	/* Roughly six seconds. */
 
+#ifdef CONFIG_RCU_FAST_NO_HZ_OFF_AT_BOOT
+#define RCU_FAST_NO_HZ_START_TIME 30000	/* Roughly 30secs waits for starting RCU_FAST_NO_HZ concept. */
+#endif
+
 static DEFINE_PER_CPU(int, rcu_dyntick_drain);
 static DEFINE_PER_CPU(unsigned long, rcu_dyntick_holdoff);
 static DEFINE_PER_CPU(struct hrtimer, rcu_idle_gp_timer);
 static ktime_t rcu_idle_gp_wait;	/* If some non-lazy callbacks. */
 static ktime_t rcu_idle_lazy_gp_wait;	/* If only lazy callbacks. */
+
+#ifdef CONFIG_RCU_FAST_NO_HZ_OFF_AT_BOOT
+static int RCU_FAST_NO_HZ_start_jiffies;		/* RCU_FAST_NO_HZ starts after this jiffies */
+static int off_rcu_fast_no_hz = 1;
+#endif
 
 /*
  * Allow the CPU to enter dyntick-idle mode if either: (1) There are no
@@ -1995,6 +2004,10 @@ static ktime_t rcu_idle_lazy_gp_wait;	/* If only lazy callbacks. */
  */
 int rcu_needs_cpu(int cpu)
 {
+#ifdef CONFIG_RCU_FAST_NO_HZ_OFF_AT_BOOT
+	if (unlikely(off_rcu_fast_no_hz))
+		return rcu_cpu_has_callbacks(cpu);
+#endif
 	/* If no callbacks, RCU doesn't need the CPU. */
 	if (!rcu_cpu_has_callbacks(cpu))
 		return 0;
@@ -2069,7 +2082,9 @@ static void rcu_prepare_for_idle_init(int cpu)
 	hrtp->function = rcu_idle_gp_timer_func;
 	if (firsttime) {
 		unsigned int upj = jiffies_to_usecs(RCU_IDLE_GP_DELAY);
-
+#ifdef CONFIG_RCU_FAST_NO_HZ_OFF_AT_BOOT
+		RCU_FAST_NO_HZ_start_jiffies = jiffies + msecs_to_jiffies(RCU_FAST_NO_HZ_START_TIME);
+#endif
 		rcu_idle_gp_wait = ns_to_ktime(upj * (u64)1000);
 		upj = jiffies_to_usecs(RCU_IDLE_LAZY_GP_DELAY);
 		rcu_idle_lazy_gp_wait = ns_to_ktime(upj * (u64)1000);
@@ -2112,6 +2127,13 @@ static void rcu_prepare_for_idle(int cpu)
 	 * If there are no callbacks on this CPU, enter dyntick-idle mode.
 	 * Also reset state to avoid prejudicing later attempts.
 	 */
+#ifdef CONFIG_RCU_FAST_NO_HZ_OFF_AT_BOOT
+	if (unlikely(off_rcu_fast_no_hz)) {
+		if (jiffies >= RCU_FAST_NO_HZ_start_jiffies)
+			off_rcu_fast_no_hz = 0;
+		return;
+	}
+#endif	
 	if (!rcu_cpu_has_callbacks(cpu)) {
 		per_cpu(rcu_dyntick_holdoff, cpu) = jiffies - 1;
 		per_cpu(rcu_dyntick_drain, cpu) = 0;

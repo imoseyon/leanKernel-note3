@@ -307,12 +307,6 @@ enum {
 	STEP_COUNTER,
 	SENSOR_MAX,
 };
-
-#define SSP_BYPASS_SENSORS_EN_ALL (1 << ACCELEROMETER_SENSOR |\
-	1 << GYROSCOPE_SENSOR | 1 << GEOMAGNETIC_UNCALIB_SENSOR |\
-	1 << GEOMAGNETIC_SENSOR | 1 << PRESSURE_SENSOR |\
-	1 << TEMPERATURE_HUMIDITY_SENSOR | 1 << LIGHT_SENSOR|\
-	1 << GYRO_UNCALIB_SENSOR | 1 << GAME_ROTATION_VECTOR) /* PROXIMITY_SENSOR is not continuos */
 	
 struct meta_data_event {
 	s32 what;
@@ -360,7 +354,11 @@ struct sensor_value {
 		u8 step_det;
 		u8 sig_motion;
 		u32 step_diff;
+#if defined (CONFIG_SENSORS_SSP_MAX88920)
+		u8 prox[2];
+#else
 		u16 prox[4];
+#endif
 		s16 data[19];
 		s32 pressure[3];
 		struct meta_data_event meta_data;

@@ -713,6 +713,7 @@ static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long actio
 		break;
 	}
 
+#if defined(SUPPORT_P2P_GO_PS)
 #ifdef PROP_TXSTATUS
 	if (suspend) {
 		dhd_wakelock_waive(dhdinfo);
@@ -722,6 +723,7 @@ static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long actio
 		dhd_wlfc_resume(&dhdinfo->pub);
 	}
 #endif
+#endif /* SUPPORT_P2P_GO_PS */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && (LINUX_VERSION_CODE <= \
 	KERNEL_VERSION(2, 6, 39))

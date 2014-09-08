@@ -4084,6 +4084,7 @@ static void a3xx_perfcounter_close(struct adreno_device *adreno_dev)
 static int a3xx_perfcounter_init(struct adreno_device *adreno_dev)
 {
 	int ret;
+	struct kgsl_device *device = &adreno_dev->dev;
 	/* SP[3] counter is broken on a330 so disable it if a330 device */
 	if (adreno_is_a330(adreno_dev))
 		a3xx_perfcounters_sp[3].countable = KGSL_PERFCOUNTER_BROKEN;
@@ -4095,15 +4096,18 @@ static int a3xx_perfcounter_init(struct adreno_device *adreno_dev)
 	ret = adreno_perfcounter_get(adreno_dev, KGSL_PERFCOUNTER_GROUP_PWR, 1,
 			NULL, PERFCOUNTER_FLAG_KERNEL);
 
-	/* VBIF waiting for RAM */
-	ret |= adreno_perfcounter_get(adreno_dev,
+	if (device->pwrctrl.bus_control) {
+		/* VBIF waiting for RAM */
+		ret |= adreno_perfcounter_get(adreno_dev,
 				KGSL_PERFCOUNTER_GROUP_VBIF_PWR, 0,
 				NULL, PERFCOUNTER_FLAG_KERNEL);
-	/* VBIF DDR cycles */
-	ret |= adreno_perfcounter_get(adreno_dev, KGSL_PERFCOUNTER_GROUP_VBIF,
+		/* VBIF DDR cycles */
+		ret |= adreno_perfcounter_get(adreno_dev,
+				KGSL_PERFCOUNTER_GROUP_VBIF,
 				VBIF_AXI_TOTAL_BEATS,
 				&adreno_dev->ram_cycles_lo,
 				PERFCOUNTER_FLAG_KERNEL);
+	}
 
 	/* Default performance counter profiling to false */
 	adreno_dev->profile.enabled = false;
@@ -4232,7 +4236,7 @@ static void a3xx_start(struct adreno_device *adreno_dev)
  */
 int a3xx_coresight_enable(struct kgsl_device *device)
 {
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	if (!kgsl_active_count_get(device)) {
 		kgsl_regwrite(device, A3XX_RBBM_DEBUG_BUS_CTL, 0x0001093F);
 		kgsl_regwrite(device, A3XX_RBBM_DEBUG_BUS_STB_CTL0,
@@ -4253,7 +4257,7 @@ int a3xx_coresight_enable(struct kgsl_device *device)
 				0x00000001);
 		kgsl_active_count_put(device);
 	}
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 	return 0;
 }
 
@@ -4264,7 +4268,7 @@ int a3xx_coresight_enable(struct kgsl_device *device)
  */
 void a3xx_coresight_disable(struct kgsl_device *device)
 {
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	if (!kgsl_active_count_get(device)) {
 		kgsl_regwrite(device, A3XX_RBBM_DEBUG_BUS_CTL, 0x0);
 		kgsl_regwrite(device, A3XX_RBBM_DEBUG_BUS_STB_CTL0, 0x0);
@@ -4277,18 +4281,18 @@ void a3xx_coresight_disable(struct kgsl_device *device)
 		kgsl_regwrite(device, A3XX_RBBM_EXT_TRACE_CMD, 0x0);
 		kgsl_active_count_put(device);
 	}
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 }
 
 static void a3xx_coresight_write_reg(struct kgsl_device *device,
 		unsigned int wordoffset, unsigned int val)
 {
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	if (!kgsl_active_count_get(device)) {
 		kgsl_regwrite(device, wordoffset, val);
 		kgsl_active_count_put(device);
 	}
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 }
 
 void a3xx_coresight_config_debug_reg(struct kgsl_device *device,
@@ -4574,6 +4578,9 @@ static unsigned int a3xx_register_offsets[ADRENO_REG_REGISTER_MAX] = {
 	ADRENO_REG_DEFINE(ADRENO_REG_TC_CNTL_STATUS, REG_TC_CNTL_STATUS),
 	ADRENO_REG_DEFINE(ADRENO_REG_TP0_CHICKEN, REG_TP0_CHICKEN),
 	ADRENO_REG_DEFINE(ADRENO_REG_RBBM_RBBM_CTL, A3XX_RBBM_RBBM_CTL),
+	ADRENO_REG_DEFINE(ADRENO_REG_UCHE_INVALIDATE0,
+				A3XX_UCHE_CACHE_INVALIDATE0_REG),
+
 };
 
 struct adreno_reg_offsets a3xx_reg_offsets = {

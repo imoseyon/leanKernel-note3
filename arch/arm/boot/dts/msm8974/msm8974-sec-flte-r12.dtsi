@@ -15,6 +15,7 @@
 /include/ "msm8974-camera-sensor-hlte-r02.dtsi"
 /include/ "msm8974-sii8240_mhl-flte-r00.dtsi"
 /include/ "msm8974-max77803-hlte-r06.dtsi"
+/include/ "msm8974-w1.dtsi"
 
 &soc {
 	serial@f991e000 {
@@ -39,7 +40,6 @@
 	mdss_mdp: qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "dsi";
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1F40000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
 		};
 	};
@@ -425,15 +425,6 @@ samsung,vibrator {
 		mpp-channel-scaling = <4 1 3>;
 	};
 
-	usb2_otg_sw: regulator-tpd4s214 {
-		compatible = "regulator-fixed";
-		regulator-name = "usb2_otg_sw";
-		gpio = <&pm8941_gpios 20 0>;
-		parent-supply = <&pm8941_boost>;
-		startup-delay-us = <17000>;
-		enable-active-high;
-	};
-
 	hsic_host: hsic@f9a00000 {
 		compatible = "qcom,hsic-host";
 		reg = <0xf9a00000 0x400>;
@@ -485,12 +476,6 @@ samsung,vibrator {
 		bluetooth_hostwake,irq-gpio = <&msmgpio 75 0x00>;
 	};
 
-	onewire {
-		compatible = "w1-gpio-msm";
-		gpios = <&msmgpio 69 0x00>;
-		linux,open-drain = <1>;
-		linux,slave-speed = <1>;
-	};
 };
 
 &gdsc_oxili_gx {

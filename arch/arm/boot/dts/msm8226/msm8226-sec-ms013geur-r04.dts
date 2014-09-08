@@ -10,12 +10,12 @@
  * GNU General Public License for more details.
  */
 
-/* qcom,msm-id =<Chip_id Board_version Other_Specific_info>
+/* qcom,msm-id =<DT_INFO  SS_BOARD_HARDWARE_REV  QC_SOC_REVISION>
  * All these three fields are unsigned 32 bit integers
- * For OtherSpecificInfo = 0xABCDEFGH [32 bits in total]
- *  G[4BITS]:MODEL_VARIANT i.e. 0 for MS01,1 for MS01_3G
- *  H[4BITS]:Hardware Revision
- * please refer to .../lk/platform/msm_shared/dev_tree.c also for how this works.
+ * DT_INFO = [31:24] chip-id, [23:16] platform-id, [15:8] national code, [7:0] operator revision[ reserved]
+ * SS_BOARD_HARDWARE_REV = Samsung specific hardware Revision
+ * QC_SOC_REVISION = Qcomm SOC Version of MTP Board
+ * Please refer to .../lk/platform/msm_shared/dev_tree.c also
  */
 
 /dts-v1/;
@@ -25,26 +25,27 @@
 / {
 	model = "[SM-G7102]MS01-Rev-04-MTP-v2";
 	compatible = "qcom,msm8226-mtp", "qcom,msm8226", "qcom,mtp";
-	qcom,msm-id = <145 8 0x20006>,
-		      <158 8 0x20006>,
-		      <159 8 0x20006>,
-		      <198 8 0x20006>,
-		      <205 8 0x20006>;
+	qcom,msm-id = <0x9E00FF01 6 0x20000>,
+			  <0x9108FF01 6 0x20000>,
+		      <0x9E08FF01 6 0x20000>,
+		      <0x9F08FF01 6 0x20000>,
+		      <0xC608FF01 6 0x20000>,
+		      <0xC708FF01 6 0x20000>;
 };
 
 &soc {
     i2c@f9924000 { /* BLSP1 QUP2 */
 		accelerometer@18 {
-			compatible = "bma255-i2c";
+			compatible = "bma254";
 			reg = <0x18>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <64 0>;
-			bma255-i2c,i2c-pull-up = <1>;
-			bma255-i2c,reg_vdd = "8226_l19";
-			bma255-i2c,reg_vio = "8226_lvs1";
-			bma255-i2c,acc_int1-gpio = <&msmgpio 64 0x1>;
-			bma255-i2c,used_chip = "BMA25X_ENABLED";
-			bma255-i2c,chip_pos = <3>;
+			bma254,i2c-pull-up = <1>;
+			bma254,vdd = "8226_l19";
+			bma254,vdd-io = "8226_lvs1";
+			bma254,irq-gpio = <&msmgpio 64 0x1>;
+			bma254,used_chip = "BMA25X_ENABLED";
+			bma254,position = <1>;
 		};
 	};
 
@@ -62,6 +63,6 @@
             but-zones-list = <&but_zones 0 0 953>,
                              <&but_zones 1 954 1343>,
                              <&but_zones 2 1344 9999>;
-
+			mpp-channel-scaling = <6 1 1>;
 	};
 };

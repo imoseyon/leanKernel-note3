@@ -373,8 +373,10 @@ static int __init boot_logo_init(void) {
 
 	pr_info("%s:+\n",__func__);
 	wq_bootlogo =	create_singlethread_workqueue("bootlogo");
+	if(wq_bootlogo==NULL)
+		return -ENOMEM;
+
 	INIT_DELAYED_WORK(&w_bootlogo, bootlogo_work);
-				
 	queue_delayed_work(wq_bootlogo,
 					&w_bootlogo, msecs_to_jiffies(2000));
 	return 0;

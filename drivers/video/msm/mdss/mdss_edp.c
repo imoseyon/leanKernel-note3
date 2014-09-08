@@ -23,7 +23,7 @@
 #include <linux/gpio.h>
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
-#include <linux/pwm.h>
+#include <linux/qpnp/pwm.h>
 #include <linux/clk.h>
 #include <linux/spinlock_types.h>
 #include <linux/kthread.h>
@@ -51,6 +51,7 @@
 #define VDDA_UA_OFF_LOAD	100		/* uA units */
 
 #if defined(CONFIG_FB_MSM_EDP_SAMSUNG)
+char eeprom_version[20];
 #define MAX_PWM_RESOLUTION 511
 #define BIT_SHIFT 22
 
@@ -167,6 +168,7 @@ static int duty_ratio_table[256] = {
 extern void edp_backlight_enable(void);
 extern void edp_backlight_disable(void);
 extern void edp_backlight_power_enable(void);
+extern int edp_backlight_status(void);
 static struct completion edp_power_sync;
 static int edp_power_state;
 static int recovery_mode;
@@ -174,6 +176,7 @@ static int edp_power_state;
 
 DEFINE_MUTEX(edp_power_state_chagne);
 DEFINE_MUTEX(edp_event_state_chagne);
+DEFINE_MUTEX(brightness_mutex);
 
 int get_edp_power_state(void)
 {
@@ -336,7 +339,7 @@ static int mdss_edp_regulator_init(struct mdss_edp_drv_pdata *edp_drv)
 			return -ENODEV;
 		}
 
-		ret = regulator_set_voltage(edp_drv->i2c_vreg, 3000000, 3000000);
+		ret = regulator_set_voltage(edp_drv->i2c_vreg, 2500000, 2500000);
 		if (ret) {
 			pr_err("%s: i2c_vreg set_voltage failed, ret=%d\n", __func__,
 					ret);
@@ -509,6 +512,8 @@ void mdss_edp_set_backlight(struct mdss_panel_data *pdata, u32 bl_level)
 		return;
 	}
 
+	mutex_lock(&brightness_mutex);
+
 	bl_max = edp_drv->panel_data.panel_info.bl_max;
 	if (bl_level > bl_max)
 		bl_level = bl_max;
@@ -517,6 +522,7 @@ void mdss_edp_set_backlight(struct mdss_panel_data *pdata, u32 bl_level)
 
 	if (edp_drv->duty_level == duty_level) {
 		pr_err("%s : same duty level..(%d) do not pwm_config..\n", __func__, duty_level);
+		mutex_unlock(&brightness_mutex);
 		return;
 	}
 
@@ -527,15 +533,17 @@ void mdss_edp_set_backlight(struct mdss_panel_data *pdata, u32 bl_level)
 	do_div(llpwm_period, ll_pwm_resolution);
 	duty_period = (llpwm_period >> BIT_SHIFT); 
 
-	ret = pwm_config(edp_drv->bl_pwm, duty_period, edp_drv->pwm_period);
+	ret = pwm_config(edp_drv->bl_pwm, duty_period * NSEC_PER_USEC, edp_drv->pwm_period * NSEC_PER_USEC);
 	if (ret) {
 		pr_err("%s: pwm_config() failed err=%d.\n", __func__, ret);
+		mutex_unlock(&brightness_mutex);
 		return;
 	}
 
 	ret = pwm_enable(edp_drv->bl_pwm);
 	if (ret) {
 		pr_err("%s: pwm_enable() failed err=%d\n", __func__, ret);
+		mutex_unlock(&brightness_mutex);
 		return;
 	}
 
@@ -547,6 +555,8 @@ void mdss_edp_set_backlight(struct mdss_panel_data *pdata, u32 bl_level)
 	edp_drv->current_bl = bl_level;
 #endif
 	edp_drv->duty_level = duty_level;
+
+	mutex_unlock(&brightness_mutex);
 
 	pr_info("%s bl_level : %d duty_level : %d duty_period : %d  duty_ratio : %d",
 				__func__, bl_level, duty_level, duty_period,
@@ -945,13 +955,18 @@ int mdss_edp_on(struct mdss_panel_data *pdata)
 #endif
 		mdss_edp_irq_enable(edp_drv);
 		tcon_i2c_slave_change();
+
+		if (gpio_get_value(edp_drv->gpio_panel_hpd)) {
+			tcon_interanl_clock();
+			read_firmware_version(eeprom_version);
+	}
 	}
 
 	mdss_edp_wait4train(edp_drv);
 
 	edp_drv->cont_splash = 0;
 
-	pr_info("%s:-\n", __func__);
+	pr_info("%s:- %s\n", __func__, eeprom_version);
 	return ret;
 }
 
@@ -1018,7 +1033,7 @@ int mdss_edp_off(struct mdss_panel_data *pdata)
 	qpnp_pin_config(edp_drv->gpio_panel_en, &LCD_EN_PM_GPIO_SLEEP);
 #endif
 	msleep(100); /* NDRA needs some delay after shutdown power */
-	pr_info("%s:-\n", __func__);
+	pr_info("%s:- %s\n", __func__, eeprom_version);
 
 	return 0;
 }
@@ -1078,8 +1093,10 @@ static int mdss_edp_event_handler(struct mdss_panel_data *pdata,
 	switch (event) {
 	case MDSS_EVENT_RESET:
 #if defined(CONFIG_FB_MSM_EDP_SAMSUNG)
-		pwm_disable(edp_drv->bl_pwm);
-		edp_backlight_disable();
+		if (edp_backlight_status() > 0) {
+			pwm_disable(edp_drv->bl_pwm);
+			edp_backlight_disable();
+		}
 		break;
 #endif
 	case MDSS_EVENT_UNBLANK:
@@ -1168,10 +1185,15 @@ static int __devexit mdss_edp_remove(struct platform_device *pdev)
 static int mdss_edp_device_register(struct mdss_edp_drv_pdata *edp_drv)
 {
 	int ret;
+	u32 tmp;
 
 	mdss_edp_edid2pinfo(edp_drv);
 	edp_drv->panel_data.panel_info.bl_min = 1;
 	edp_drv->panel_data.panel_info.bl_max = 255;
+	ret = of_property_read_u32(edp_drv->pdev->dev.of_node,
+		"qcom,mdss-brightness-max-level", &tmp);
+	edp_drv->panel_data.panel_info.brightness_max =
+		(!ret ? tmp : MDSS_MAX_BL_BRIGHTNESS);
 
 	edp_drv->panel_data.event_handler = mdss_edp_event_handler;
 	edp_drv->panel_data.set_backlight = mdss_edp_set_backlight;
@@ -1279,6 +1301,20 @@ static void mdss_edp_fill_edid_data(struct mdss_edp_drv_pdata *edp_drv)
 	edid->color_depth = 8;
 	edid->dpm = 0;
 	edid->color_format = 0;
+
+#if defined(CONFIG_MACH_VIENNA)
+	edid->timing[0].pclk = 267000000;
+
+	edid->timing[0].h_addressable = 2560;
+	edid->timing[0].h_blank = 164;
+	edid->timing[0].h_fporch = 62;
+	edid->timing[0].h_sync_pulse = 22;
+
+	edid->timing[0].v_addressable = 1600;
+	edid->timing[0].v_blank = 33;
+	edid->timing[0].v_fporch = 6;
+	edid->timing[0].v_sync_pulse = 6;
+#else
 	edid->timing[0].pclk = 274000000;
 
 	edid->timing[0].h_addressable = 2560;
@@ -1290,6 +1326,7 @@ static void mdss_edp_fill_edid_data(struct mdss_edp_drv_pdata *edp_drv)
 	edid->timing[0].v_blank = 73;
 	edid->timing[0].v_fporch = 3;
 	edid->timing[0].v_sync_pulse = 6;
+#endif
 
 	edid->timing[0].width_mm = 271;
 	edid->timing[0].height_mm = 172;
@@ -1394,10 +1431,12 @@ static int edp_event_thread(void *data)
 					if (gpio_get_value(ep->gpio_panel_hpd)) {
 						pr_err("%s : hpd detected count_recovery = %d \n", __func__, count_recovery);
 						msleep(230); /* NDRA LDI REQUIREMENT  350ms delay*/
+						tcon_interanl_clock();
 						mdss_edp_do_link_train(ep);
 #if defined(CONFIG_FB_MSM_EDP_SAMSUNG)
 						edp_power_state = 1;
 						edp_backlight_enable();
+						mdss_edp_set_backlight(&ep->panel_data, ep->current_bl);
 						complete(&edp_power_sync);
 #endif
 					}
@@ -1746,11 +1785,11 @@ probe_err:
 static int __init edp_current_boot_mode(char *mode)
 {
 	/*
-	*	1 is recovery booting
+	*	1, 2 is recovery booting
 	*	0 is normal booting
 	*/
 
-	if (strncmp(mode, "1", 1) == 0)
+        if ((strncmp(mode, "1", 1) == 0)||(strncmp(mode, "2", 1) == 0))
 		recovery_mode = 1;
 	else
 		recovery_mode = 0;

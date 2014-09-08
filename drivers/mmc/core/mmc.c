@@ -619,6 +619,18 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		card->ext_csd.max_packed_reads =
 			ext_csd[EXT_CSD_MAX_PACKED_READS];
 	}
+else{
+		/*
+		 * enable discard feature if emmc is 4.41+ Toshiba eMMC 19nm
+		 *  Normally, emmc 4.5 use EXT_CSD[501]
+		*/
+		if ((ext_csd[501] & 0x3F) && (card->cid.manfid == 0x11))
+			card->ext_csd.feature_support |= MMC_DISCARD_FEATURE;
+
+		/* enable discard feature if emmc is 4.41+ moviNand (EXT_CSD_VENDOR_SPECIFIC_FIELD:64)*/
+		if ((ext_csd[64] & 0x1) && (card->cid.manfid == 0x15))
+			card->ext_csd.feature_support |= MMC_DISCARD_FEATURE;
+	}	
 
 	/* eMMC v5.0 or later */
 	if (card->ext_csd.rev >= 7) {
@@ -1264,9 +1276,9 @@ int mmc_set_clock_bus_speed(struct mmc_card *card, unsigned long freq)
 		mmc_set_timing(card->host, MMC_TIMING_LEGACY);
 		mmc_set_clock(card->host, MMC_HIGH_26_MAX_DTR);
 
-		err = mmc_select_hs(card, &card->cached_ext_csd);
+		err = mmc_select_hs(card, card->cached_ext_csd);
 	} else {
-		err = mmc_select_hs400(card, &card->cached_ext_csd);
+		err = mmc_select_hs400(card, card->cached_ext_csd);
 	}
 
 	return err;
@@ -1322,8 +1334,7 @@ static int mmc_change_bus_speed(struct mmc_host *host, unsigned long *freq)
 		mmc_set_clock(host, (unsigned int) (*freq));
 	}
 
-	if ((mmc_card_hs400(card) || mmc_card_hs200(card))
-		&& card->host->ops->execute_tuning) {
+	if (mmc_card_hs200(card) && card->host->ops->execute_tuning) {
 		/*
 		 * We try to probe host driver for tuning for any
 		 * frequency, it is host driver responsibility to
@@ -1514,7 +1525,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_get_ext_csd(card, &ext_csd);
 		if (err)
 			goto free_card;
-		memcpy(&card->cached_ext_csd, ext_csd, sizeof(card->ext_csd));
+		card->cached_ext_csd = ext_csd;
 		err = mmc_read_ext_csd(card, ext_csd);
 		if (err)
 			goto free_card;
@@ -1722,15 +1733,12 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	if (!oldcard)
 		host->card = card;
 
-	mmc_free_ext_csd(ext_csd);
 	return 0;
 
 free_card:
 	if (!oldcard)
 		mmc_remove_card(card);
 err:
-	mmc_free_ext_csd(ext_csd);
-
 	return err;
 }
 

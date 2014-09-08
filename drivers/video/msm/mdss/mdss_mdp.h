@@ -187,6 +187,7 @@ struct mdss_mdp_ctl {
 	struct mdss_mdp_vsync_handler vsync_handler;
 
 	struct mdss_mdp_img_rect roi;
+	struct mdss_mdp_img_rect roi_bkup;
 	u8 roi_changed;
 
 	int (*start_fnc) (struct mdss_mdp_ctl *ctl);
@@ -276,7 +277,6 @@ struct pp_hist_col_info {
 	u32 hist_cnt_sent;
 	u32 hist_cnt_time;
 	u32 frame_cnt;
-	u32 is_kick_ready;
 	struct completion comp;
 	u32 data[HIST_V_SIZE];
 	struct mutex hist_mutex;
@@ -291,6 +291,7 @@ struct mdss_mdp_ad {
 struct mdss_ad_info {
 	u8 num;
 	u8 calc_hw_num;
+	u32 ops;
 	u32 sts;
 	u32 reg_sts;
 	u32 state;
@@ -373,7 +374,6 @@ struct mdss_mdp_pipe {
 	u8 overfetch_disable;
 	u32 transp;
 	u32 bg_color;
-	u8 has_buf;
 
 	struct msm_fb_data_type *mfd;
 	struct mdss_mdp_mixer *mixer;
@@ -391,6 +391,7 @@ struct mdss_mdp_pipe {
 
 	struct mdp_overlay_pp_params pp_cfg;
 	struct mdss_pipe_pp_res pp_res;
+	struct mdp_scale_data scale;	
 };
 
 struct mdss_mdp_writeback_arg {
@@ -487,6 +488,7 @@ unsigned long mdss_mdp_get_clk_rate(u32 clk_idx);
 int mdss_mdp_vsync_clk_enable(int enable);
 void mdss_mdp_clk_ctrl(int enable, int isr);
 struct mdss_data_type *mdss_mdp_get_mdata(void);
+void mdss_mdp_underrun_dump_info(struct msm_fb_data_type *);
 
 int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd);
 int mdss_mdp_overlay_req_check(struct msm_fb_data_type *mfd,
@@ -516,8 +518,9 @@ int mdss_mdp_ctl_splash_finish(struct mdss_mdp_ctl *ctl, bool handoff);
 int mdss_mdp_ctl_setup(struct mdss_mdp_ctl *ctl);
 int mdss_mdp_ctl_split_display_setup(struct mdss_mdp_ctl *ctl,
 		struct mdss_panel_data *pdata);
+struct mdss_mdp_ctl *mdss_mdp_get_split_ctl(struct mdss_mdp_ctl *ctl);
 int mdss_mdp_ctl_destroy(struct mdss_mdp_ctl *ctl);
-int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl);
+int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl, bool handoff);
 int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl);
 int mdss_mdp_ctl_intf_event(struct mdss_mdp_ctl *ctl, int event, void *arg);
 
@@ -675,5 +678,6 @@ int mdss_mdp_wb_get_secure(struct msm_fb_data_type *mfd, uint8_t *enable);
 int mdss_mdp_ctl_reset(struct mdss_mdp_ctl *ctl);
 
 void dumpreg(void);
+void mdss_dsi_debug_check_te(void);
 void mdp5_dump_regs(void);
 #endif /* MDSS_MDP_H */

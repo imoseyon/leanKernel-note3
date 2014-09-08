@@ -135,7 +135,7 @@ static struct gpiomux_setting gpio_spi_config = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
-#if !defined(CONFIG_TDMB)
+#if !defined(CONFIG_TDMB) && !defined(CONFIG_MACH_KS01EUR)
 static struct gpiomux_setting gpio_spi_susp_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -251,17 +251,6 @@ static struct gpiomux_setting gpio_i2c_gpio_config = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
-static struct gpiomux_setting gpio_i2c_act_config = {
-	.func = GPIOMUX_FUNC_3,
-	/*
-	 * Please keep I2C GPIOs drive-strength at minimum (2ma). It is a
-	 * workaround for HW issue of glitches caused by rapid GPIO current-
-	 * change.
-	 */
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_UP,
-};
-
 static struct gpiomux_setting nfc_i2c_config = {
 		.func = GPIOMUX_FUNC_GPIO,
 		.drv = GPIOMUX_DRV_2MA,
@@ -310,7 +299,7 @@ static struct gpiomux_setting taiko_int = {
 static struct gpiomux_setting nfc_irq_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
+	.pull = GPIOMUX_PULL_NONE,
 	.dir = GPIOMUX_IN,
 };
 
@@ -508,14 +497,12 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 		.gpio      = 6,		/* BLSP1 QUP2 I2C_DAT */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
-			[GPIOMUX_ACTIVE] = &gpio_i2c_act_config,
 		},
 	},
 	{
 		.gpio      = 7,		/* BLSP1 QUP2 I2C_CLK */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
-			[GPIOMUX_ACTIVE] = &gpio_i2c_act_config,
 		},
 	},
 #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
@@ -1257,6 +1244,24 @@ static struct msm_gpiomux_config cypress_touch_configs[] __initdata = {
 };
 #endif
 
+#if defined(CONFIG_MACH_KS01EUR)
+static struct gpiomux_setting wc_configs = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+	.dir = GPIOMUX_IN,
+};
+
+static struct msm_gpiomux_config wireless_charge_configs[] __initdata = {
+	{
+		.gpio = 82,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &wc_configs,
+		},
+	},
+};
+#endif
+
 static struct msm_gpiomux_config nc_configs[] __initdata = {
 	{
 		.gpio = GPIO_NC_25,
@@ -1264,12 +1269,14 @@ static struct msm_gpiomux_config nc_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &nc_cfg,
 		},
 	},
+#if !defined(CONFIG_MACH_KS01EUR)
 	{
 		.gpio = GPIO_NC_82,
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &nc_cfg,
 		},
 	},
+#endif
 	/*
 	{
 		.gpio = GPIO_NC_95,
@@ -1302,7 +1309,98 @@ static struct msm_gpiomux_config nc_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &nc_cfg,
 		},
 	},
+#if defined(CONFIG_MACH_KS01EUR)
+	{
+		.gpio = 18,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 41,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 43,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 122,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 124,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 125,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 135,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 136,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 142,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio = 143,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &nc_cfg,
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+#endif
 };
+
+#if defined(CONFIG_MACH_KS01EUR)
+static struct gpiomux_setting batt_rem_alarm_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_OUT_LOW,
+};
+static struct msm_gpiomux_config batt_rem_alarm_configs[] __initdata = {
+	/* BATT_REM_ALARM */
+	{
+		.gpio = 101,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &batt_rem_alarm_cfg,
+			[GPIOMUX_SUSPENDED] = &batt_rem_alarm_cfg,
+		},
+	},
+};
+#endif
 
 static struct msm_gpiomux_config fpga_tflash[] __initdata = {
 	{
@@ -1486,6 +1584,14 @@ void __init msm_8974_init_gpiomux(void)
 	msm_gpiomux_install(tdmb_int_config, ARRAY_SIZE(tdmb_int_config));
 #endif
 
+#if defined(CONFIG_MACH_KS01EUR)
+	msm_gpiomux_install(batt_rem_alarm_configs,
+			ARRAY_SIZE(batt_rem_alarm_configs));
+#endif
+
 	msm_gpiomux_install(nc_configs,
 			ARRAY_SIZE(nc_configs));
+#if defined(CONFIG_MACH_KS01EUR)
+	msm_gpiomux_install(wireless_charge_configs, ARRAY_SIZE(wireless_charge_configs));
+#endif
 }

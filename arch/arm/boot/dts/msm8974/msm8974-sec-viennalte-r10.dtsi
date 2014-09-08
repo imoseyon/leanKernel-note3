@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 
-/include/ "msm8974-leds.dtsi"
+/include/ "msm8974-lt03-leds.dtsi"
 /include/ "msm8974-camera-sensor-vienna-r00.dtsi"
 /include/ "msm8974-sii8240_mhl-v1lte-r01.dtsi"
 
@@ -41,7 +41,6 @@
 	mdss_mdp: qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "edp";
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* 32 MB allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1F40000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
 			qcom,memblock-reserve = <0x03200000 0x01F00000>;
 			qcom,mdss-fb-split = <1536 1024>;
@@ -83,7 +82,7 @@
 
 		barcode_emul_ice4@19 {
 			compatible = "barcode_hlte,barcode_emul_hlte";
-			reg = <0x19>;			
+			reg = <0x19>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <64 0>;
 			vdd-supply = <&pm8941_l19>;
@@ -91,7 +90,7 @@
 			barcode,reset_n = <&msmgpio 132 0x00>;
 			barcode,scl-gpio = <&msmgpio 108 0x00>;
 			barcode,sda-gpio = <&msmgpio 109 0x00>;
-			barcode,irq-gpio = <&msmgpio 64 0x00>;			
+			barcode,irq-gpio = <&msmgpio 64 0x00>;
 			barcode,i2c-pull-up = <1>;
 		};
 	};
@@ -142,14 +141,14 @@
 
 	actuator0: qcom,actuator@18 {
 		compatible = "qcom,actuator";
-		cell-index = <0>;			
+		cell-index = <0>;
 		reg = <0x18>;
 		qcom,cci-master = <0>;
 	};
 	i2c@f9927000 {
 	actuator1: qcom,actuator@18 {
 		compatible = "qcom,actuator";
-		cell-index = <1>;			
+		cell-index = <1>;
 		reg = <0x18>;
 				gpios = <&msmgpio 25 0>,
 					<&msmgpio 26 0>;
@@ -404,7 +403,7 @@
 
 	earjack {
 		compatible = "sec_jack";
-		qcom,earjack-read-vadc = <&pm8941_vadc>;		
+		qcom,earjack-read-vadc = <&pm8941_vadc>;
 		qcom,earjack-detect-gpio = <&pm8941_gpios 22 0>;
 		qcom,earjack-micbias-gpio = <&pm8941_gpios 34 0>;
 		qcom,earjack-sendend-gpio = <&msmgpio 77 0>;
@@ -416,7 +415,7 @@
 		but-zones-list = <&but_zones 0 0 155>,
 						<&but_zones 1 156 320>,
 						<&but_zones 2 321 700>;
-		mpp-channel-scaling = <4 1 3>;						
+		mpp-channel-scaling = <4 1 3>;
 	};
 
 	battery {
@@ -688,18 +687,18 @@
 
 	qcom,vdd-always-on;
 	qcom,vdd-voltage-level = <1800000 1800000>;
-	qcom,vdd-current-level = <2000 16000>;
+	qcom,vdd-current-level = <2000 32000>;
 
 	qcom,vdd-io-always-on;
 	qcom,vdd-io-voltage-level = <1800000 1800000>;
-	qcom,vdd-io-current-level = <2000 16000>;
+	qcom,vdd-io-current-level = <2000 32000>;
 
 	qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 	qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 	qcom,pad-drv-on = <0x7 0x4 0x4>; /* 16mA, 10mA, 10mA */
 	qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
 
-	qcom,current-limit = <16000>;
+	qcom,current-limit = <32000>;
 
 	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
 
@@ -913,12 +912,12 @@
 	};
 
 	gpio@d000 { /* GPIO 17 */
-		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */ 
-		qcom,output-type = <0>;		/* QPNP_PIN_OUT_BUF_CMOS */ 
-		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */ 
-		qcom,vin-sel = <2>; 		/* QPNP_PIN_VIN2 */ 
-		qcom,out-strength = <3>;	/* QPNP_PIN_OUT_STRENGTH_HIGH */ 
-		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_2 : LPG8*/ 
+		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */
+		qcom,output-type = <0>;		/* QPNP_PIN_OUT_BUF_CMOS */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */
+		qcom,vin-sel = <2>; 		/* QPNP_PIN_VIN2 */
+		qcom,out-strength = <3>;	/* QPNP_PIN_OUT_STRENGTH_HIGH */
+		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_2 : LPG8*/
 		qcom,master-en = <1>;
 	};
 
@@ -947,7 +946,7 @@
 		qcom,mode = <0>;
 		qcom,output-type = <0>;
 		qcom,vin-sel = <2>;
-		qcom,out-strength = <2>; 
+		qcom,out-strength = <2>;
 		qcom,src-sel = <0>;
 		qcom,pull = <5>;
 		qcom,master-en = <1>;

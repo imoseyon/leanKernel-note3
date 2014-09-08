@@ -31,6 +31,7 @@ static DEFINE_MUTEX(mdss_mdp_smp_lock);
 static int mdss_mdp_pipe_free(struct mdss_mdp_pipe *pipe);
 static struct mdss_mdp_pipe *mdss_mdp_pipe_search_by_client_id(
 	struct mdss_data_type *mdata, int client_id);
+static void mdss_mdp_smp_mmb_free(unsigned long *smp, bool write);
 
 static inline void mdss_mdp_pipe_write(struct mdss_mdp_pipe *pipe,
 				       u32 reg, u32 val)
@@ -43,7 +44,7 @@ static inline u32 mdss_mdp_pipe_read(struct mdss_mdp_pipe *pipe, u32 reg)
 	return readl_relaxed(pipe->base + reg);
 }
 
-static u32 mdss_mdp_smp_mmb_reserve(struct mdss_mdp_pipe_smp_map *smp_map,
+static u32 mdss_mdp_smp_mmb_reserve(struct mdss_mdp_pipe *pipe, struct mdss_mdp_pipe_smp_map *smp_map,
 	size_t n)
 {
 	u32 i, mmb;
@@ -55,8 +56,28 @@ static u32 mdss_mdp_smp_mmb_reserve(struct mdss_mdp_pipe_smp_map *smp_map,
 	else
 		n -= fixed_cnt;
 
+	i = bitmap_weight(smp_map->allocated, SMP_MB_CNT);	
+
+	/*
+	 * SMP programming is not double buffered. Fail the request,
+	 * that calls for change in smp configuration (addition/removal
+	 * of smp blocks), so that fallback solution happens.
+	 */
+	if (pipe->src_fmt->is_yuv || (pipe->flags & MDP_BACKEND_COMPOSITION)) {
+	if (i != 0 && n != i) {
+		pr_debug("Can't change mmb configuration in set call\n");
+		return 0;
+	}
+	}
+	
+	 /* 
+	 * Clear previous SMP reservations and reserve according to the 
+	 * latest configuration 
+	 */ 
+	 mdss_mdp_smp_mmb_free(smp_map->reserved, false); 
+
 	/* reserve more blocks if needed, but can't free mmb at this point */
-	for (i = bitmap_weight(smp_map->allocated, SMP_MB_CNT); i < n; i++) {
+	for (; i < n; i++) {
 		if (bitmap_full(mdata->mmb_alloc_map, SMP_MB_CNT))
 			break;
 
@@ -168,6 +189,9 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 	int rc = 0, rot_mode = 0;
 	u32 nlines, format;
 	u16 width;
+#if defined(CONFIG_FB_MSM_MDSS_TC_DSI2LVDS_WXGA_PANEL) || defined(CONFIG_FB_MSM_MDSS_SDC_WXGA_PANEL)
+	int wb_mixer = 0;
+#endif
 
 	width = pipe->src.w >> pipe->horz_deci;
 
@@ -223,9 +247,29 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 
 	nlines = pipe->bwc_mode ? 1 : 2;
 
+#if defined(CONFIG_FB_MSM_MDSS_TC_DSI2LVDS_WXGA_PANEL) || defined(CONFIG_FB_MSM_MDSS_SDC_WXGA_PANEL)
+	if (pipe->mixer->type == MDSS_MDP_MIXER_TYPE_WRITEBACK)
+		wb_mixer = 1;
+#endif
+
 	mutex_lock(&mdss_mdp_smp_lock);
+	if (pipe->src_fmt->is_yuv || (pipe->flags & MDP_BACKEND_COMPOSITION)) {
+	for (i = (MAX_PLANES - 1); i >= ps.num_planes; i--) {
+		if (bitmap_weight(pipe->smp_map[i].allocated, SMP_MB_CNT)) {
+			pr_debug("Extra mmb identified for pnum=%d plane=%d\n",
+				pipe->num, i);
+			mutex_unlock(&mdss_mdp_smp_lock);
+			return -EAGAIN;
+		}
+	}
+	}
+
 	for (i = 0; i < ps.num_planes; i++) {
+#if defined(CONFIG_FB_MSM_MDSS_TC_DSI2LVDS_WXGA_PANEL) || defined(CONFIG_FB_MSM_MDSS_SDC_WXGA_PANEL)
+		if (rot_mode || wb_mixer) {
+#else
 		if (rot_mode) {
+#endif
 			num_blks = 1;
 		} else {
 			num_blks = DIV_ROUND_UP(ps.ystride[i] * nlines,
@@ -242,14 +286,14 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 
 		pr_debug("reserving %d mmb for pnum=%d plane=%d\n",
 				num_blks, pipe->num, i);
-		reserved = mdss_mdp_smp_mmb_reserve(&pipe->smp_map[i],
+		reserved = mdss_mdp_smp_mmb_reserve(pipe, &pipe->smp_map[i],
 			num_blks);
 		if (reserved < num_blks)
 			break;
 	}
 
 	if (reserved < num_blks) {
-		pr_debug("insufficient MMB blocks\n");
+		pr_err("insufficient MMB blocks\n");
 		for (; i >= 0; i--)
 			mdss_mdp_smp_mmb_free(pipe->smp_map[i].reserved,
 				false);
@@ -472,6 +516,9 @@ static struct mdss_mdp_pipe *mdss_mdp_pipe_init(struct mdss_mdp_mixer *mixer,
 		 * shared as long as its attached to a writeback mixer
 		 */
 		pipe = mdata->dma_pipes + mixer->num;
+		if ((pipe->mixer->type != MDSS_MDP_MIXER_TYPE_WRITEBACK) ||
+				(pipe->mixer->rotator_mode && mixer->rotator_mode))
+				return NULL;
 		mdss_mdp_pipe_map(pipe);
 		pr_debug("pipe sharing for pipe=%d\n", pipe->num);
 	} else {
@@ -739,13 +786,26 @@ static int mdss_mdp_image_setup(struct mdss_mdp_pipe *pipe,
 	dst = pipe->dst;
 	src = pipe->src;
 
-	if (pipe->mixer->type == MDSS_MDP_MIXER_TYPE_INTF)
+	if (pipe->mixer->type == MDSS_MDP_MIXER_TYPE_INTF) {
 		mdss_mdp_crop_rect(&src, &dst, &sci);
+        if (pipe->flags & MDP_FLIP_LR) {
+			src.x = pipe->src.x + (pipe->src.x + pipe->src.w)
+				- (src.x + src.w);
+		}
+		if (pipe->flags & MDP_FLIP_UD) {
+			src.y = pipe->src.y + (pipe->src.y + pipe->src.h)
+				- (src.y + src.h);
+		}
+	}
 
 	src_size = (src.h << 16) | src.w;
 	src_xy = (src.y << 16) | src.x;
 	dst_size = (dst.h << 16) | dst.w;
+#if defined(CONFIG_MDSS_UD_FLIP)
+	dst_xy = (((pipe->mixer->height - pipe->dst.y - pipe->dst.h) << 16) | pipe->dst.x);
+#else
 	dst_xy = (dst.y << 16) | dst.x;
+#endif
 
 	ystride0 =  (pipe->src_planes.ystride[0]) |
 			(pipe->src_planes.ystride[1] << 16);
@@ -964,7 +1024,7 @@ int mdss_mdp_pipe_queue_data(struct mdss_mdp_pipe *pipe,
 			 (pipe->mixer->type == MDSS_MDP_MIXER_TYPE_WRITEBACK)
 			 && (ctl->mdata->mixer_switched)) ||
 			 ctl->roi_changed;
-	if (src_data == NULL || !pipe->has_buf) {
+	if (src_data == NULL || (pipe->flags & MDP_SOLID_FILL)) {
 		pipe->params_changed = 0;
 		mdss_mdp_pipe_solidfill_setup(pipe);
 		goto update_nobuf;

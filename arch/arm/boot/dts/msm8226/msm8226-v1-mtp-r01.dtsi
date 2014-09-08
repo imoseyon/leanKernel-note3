@@ -11,7 +11,6 @@
  */
 
 /include/ "dsi_panel_magana_octa_720p_video.dtsi"
-/include/ "msm8226-camera-sensor-mtp-r01.dtsi"
 
 &soc {
 	serial@f991f000 {
@@ -116,7 +115,7 @@
 		};
 
 		vol_down {
-			lable = "volume_down";
+			label = "volume_down";
 			gpios = <&msmgpio 107 0x1>;
 			linux,input-type = <1>;
 			linux,code = <114>;

@@ -21,11 +21,15 @@
 / {
 	model = "Qualcomm APQ 8026";
 	compatible = "qcom,apq8026";
-	qcom,msm-id = <199 0x20000>,
-		      <219 0x20000>;
 };
 
 &tsens {
 	qcom,sensors = <6>;
 	qcom,slope = <2901 2846 3038 2955 2901 2846>;
+};
+
+&memory_hole {
+	qcom,memblock-remove = <0x08400000 0x2000000
+				0x0cb00000 0x2b00000 /* Increase TZ apps region to 6MB (SR #0133393) + 1MB reserved for TIMA logging at 0xd100000 */
+				0x0fa00000 0x500000>; /* Address and Size of Hole */
 };

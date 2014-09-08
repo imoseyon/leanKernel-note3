@@ -134,6 +134,8 @@ extern bool  bcmsdh_fatal_error(void *sdh);
 
 /* Maximum milliseconds to wait for F2 to come up */
 #define DHD_WAIT_F2RDY	3000
+/* Keep balance between benefit of tx chance and adv of increasing rx speed in dhdsdio_readframes */
+#define TXINRX_THRESH	32
 
 /* Bump up limit on waiting for HT to account for first startup;
  * if the image is doing a CRC calculation before programming the PMU
@@ -5614,7 +5616,7 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 		if (TXCTLOK(bus) && bus->ctrl_frame_stat && (bus->clkstate == CLK_AVAIL)) {
 			dhdsdio_sendpendctl(bus);
 		} else if ((bus->clkstate == CLK_AVAIL) && !bus->fcstate &&
-			pktq_mlen(&bus->txq, ~bus->flowcontrol) && DATAOK(bus)) {
+			DATAOK(bus) && (pktq_mlen(&bus->txq, ~bus->flowcontrol) > TXINRX_THRESH)){
 			dhdsdio_sendfromq(bus, dhd_txbound);
 		}
 #endif /* DHDTHREAD */

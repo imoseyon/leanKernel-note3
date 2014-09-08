@@ -343,6 +343,7 @@ enum adreno_regs {
 	ADRENO_REG_TC_CNTL_STATUS,
 	ADRENO_REG_TP0_CHICKEN,
 	ADRENO_REG_RBBM_RBBM_CTL,
+	ADRENO_REG_UCHE_INVALIDATE0,
 	ADRENO_REG_REGISTER_MAX,
 };
 
@@ -570,6 +571,8 @@ static inline int adreno_is_a2xx(struct adreno_device *adreno_dev)
 	return (adreno_dev->gpurev <= 299);
 }
 
+bool adreno_hw_isidle(struct kgsl_device *device);
+
 static inline int adreno_is_a3xx(struct adreno_device *adreno_dev)
 {
 	return (adreno_dev->gpurev >= 300);
@@ -762,6 +765,7 @@ static inline int adreno_wait_reg_eq(unsigned int *cmds, unsigned int addr,
 	*cmds++ = val;
 	*cmds++ = mask;
 	*cmds++ = interval;
+
 	return cmds - start;
 }
 

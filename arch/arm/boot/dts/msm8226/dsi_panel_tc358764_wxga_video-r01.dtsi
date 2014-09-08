@@ -11,22 +11,26 @@
  */
 
 &mdss_mdp {
-	dsi2lvds_wxga_vid_r01:qcom,mdss_dsi_sdc_wxga_video {
+	dsi2lvds_wxga_vid_r01:qcom,mdss_dsi_tc358764_wxga_video {
 		qcom,mdss-dsi-panel-name = "TC358764 dsi2lvds WXGA video mode panel";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,rst-gpio = <&msmgpio 51 0>;
-		qcom,lvds-supply-gpio = <&msmgpio 25 0>;
+		qcom,enable-gpio = <&msmgpio 25 0>;
 		qcom,bl-rst-gpio = <&msmgpio 74 0>;
+		qcom,bl-sda-gpio = <&msmgpio 20 0>;
+		qcom,bl-scl-gpio = <&msmgpio 21 0>;
 		qcom,lcd_ldi_int = <&msmgpio 53 0>;
-		qcom,bl-on-gpio = <&pm8226_gpios 2 0>;
+		qcom,lcd-en-gpio = <&pm8226_gpios 2 0>;
 		qcom,bl-wled = <&msmgpio 33 0>;
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-dsi-panel-width = <1280>;
 		qcom,mdss-dsi-panel-height = <800>;
+		qcom,mdss-pan-physical-width-dimension = <228>; /* <Width> real size of panel in mm */
+		qcom,mdss-pan-physical-height-dimension = <149>; /*<Height> real size of panel in mm */
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-init-delay-us = <100>;
 		qcom,mdss-dsi-h-front-porch = <48>;
@@ -54,6 +58,8 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
 		qcom,mdss-dsi-traffic-mode = <1>;
 		qcom,mdss-pan-dsi-dst-format = <3>;
 		qcom,mdss-dsi-lane-map = <0>;
@@ -63,7 +69,7 @@
 		qcom,mdss-pan-dsi-mdp-tr = <0x0>;
 		qcom,mdss-pan-dsi-dma-tr = <0x04>;
 		qcom,mdss-dsi-panel-timings = [74 1c 1c 00 36 36 1d 1d  20 03 04 00];
-		qcom,mdss-dsi-panel-clock-rate = <420000000>;
+		qcom,mdss-dsi-panel-clock-rate = <458000000>;
 		qcom,platform-strength-ctrl = [ff 06];
 		qcom,platform-regulator-settings = [07 09 03 00 20 00 01];
 		qcom,mdss-dsi-on-command = [
@@ -103,6 +109,9 @@
 			29 01 00 00 00 00 06 9C 04 01 00 00 00
 			];
 		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-off-command = [29 01 00 00 01 00 06 A0 04 01 00 00 00
+			29 01 00 00 00 00 06 9C 04 00 00 00 00];
 	};
 };
 &soc {
@@ -123,7 +132,7 @@
 			00 c0 00 00 00 00 00 01 bb];
 
 		qcom,platform-supply-entry1 {
-			qcom,supply-name = "vddio";
+			qcom,supply-name = "vdda";
 			qcom,supply-min-voltage = <1200000>;
 			qcom,supply-max-voltage = <1200000>;
 			qcom,supply-enable-load = <100000>;
@@ -134,17 +143,6 @@
 			qcom,supply-post-off-sleep = <0>;
 		};
 		qcom,platform-supply-entry2 {
-			qcom,supply-name = "vdda";
-			qcom,supply-min-voltage = <1200000>;
-			qcom,supply-max-voltage = <1200000>;
-			qcom,supply-enable-load = <100000>;
-			qcom,supply-disable-load = <100>;
-			qcom,supply-pre-on-sleep = <0>;
-			qcom,supply-post-on-sleep = <20>;
-			qcom,supply-pre-off-sleep = <0>;
-			qcom,supply-post-off-sleep = <0>;
-		};
-		qcom,platform-supply-entry3 {
 			qcom,supply-name = "vddiol8";
 			qcom,supply-min-voltage = <1800000>;
 			qcom,supply-max-voltage = <1800000>;

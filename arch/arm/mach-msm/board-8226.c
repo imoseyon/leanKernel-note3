@@ -63,6 +63,66 @@
 #ifdef CONFIG_PROC_AVC
 #include <linux/proc_avc.h>
 #endif
+
+#ifdef CONFIG_SEC_THERMISTOR
+#include <mach/msm8x26-thermistor.h>
+#endif
+
+#ifdef CONFIG_LEDS_MAX77804K
+#include <linux/leds-max77804k.h>
+#endif
+
+#ifdef CONFIG_SENSORS_SSP
+extern int poweroff_charging;
+static struct regulator *vsensor_2p85, *vsensor_1p8;
+static int __init sensor_hub_init(void)
+{
+	int ret;
+
+	if(poweroff_charging)
+		return 0;
+
+	vsensor_2p85 = regulator_get(NULL, "8226_l19");
+	if (IS_ERR(vsensor_2p85))
+		pr_err("[SSP] could not get 8226_l19, %ld\n",
+			PTR_ERR(vsensor_2p85));
+
+	vsensor_1p8 = regulator_get(NULL, "8226_lvs1");
+	if (IS_ERR(vsensor_1p8))
+		pr_err("[SSP] could not get 8226_lvs1, %ld\n",
+			PTR_ERR(vsensor_1p8));
+
+	ret = regulator_enable(vsensor_2p85);
+	if (ret)
+		pr_err("[SSP] %s: error enabling regulator 2p85\n", __func__);
+
+	ret = regulator_enable(vsensor_1p8);
+	if (ret)
+		pr_err("[SSP] %s: error enabling regulator 1p8\n", __func__);
+
+	pr_info("[SSP] %s: power on\n", __func__);
+	return 0;
+}
+#endif /* CONFIG_SENSORS_SSP */
+
+#ifdef CONFIG_LEDS_MAX77804K
+struct max77804k_led_platform_data max77804k_led_pdata = {
+	.num_leds = 2,
+
+	.leds[0].name = "leds-sec1",
+	.leds[0].id = MAX77804K_FLASH_LED_1,
+	.leds[0].timer = MAX77804K_FLASH_TIME_1000MS,
+	.leds[0].timer_mode = MAX77804K_TIMER_MODE_MAX_TIMER,
+	.leds[0].cntrl_mode = MAX77804K_LED_CTRL_BY_FLASHSTB,
+	.leds[0].brightness = 0x3D,
+
+	.leds[1].name = "torch-sec1",
+	.leds[1].id = MAX77804K_TORCH_LED_1,
+	.leds[1].cntrl_mode = MAX77804K_LED_CTRL_BY_FLASHSTB,
+	.leds[1].brightness = 0x06,
+};
+#endif
+
 static struct memtype_reserve msm8226_reserve_table[] __initdata = {
 	[MEMTYPE_SMI] = {
 	},
@@ -156,6 +216,10 @@ void __init msm8226_add_drivers(void)
 	else
 		msm_clock_init(&msm8226_clock_init_data);
 	tsens_tm_init_driver();
+
+#ifdef CONFIG_SEC_THERMISTOR
+	platform_device_register(&sec_device_thermistor);
+#endif
 	msm_thermal_device_init();
 }
 struct class *sec_class;
@@ -176,17 +240,25 @@ static void samsung_sys_class_init(void)
 };
 
 #if defined(CONFIG_BATTERY_SAMSUNG)
-#if (defined(CONFIG_SEC_MILLET_PROJECT) || defined(CONFIG_SEC_MATISSE_PROJECT) ||defined(CONFIG_SEC_BERLUTI_PROJECT))
+#if defined(CONFIG_SEC_MILLET_PROJECT) || defined(CONFIG_SEC_MATISSE_PROJECT) ||defined(CONFIG_SEC_BERLUTI_PROJECT) || \
+	defined(CONFIG_SEC_VICTOR_PROJECT) || defined(CONFIG_SEC_FRESCONEO_PROJECT) || defined(CONFIG_SEC_AFYON_PROJECT) || \
+	defined(CONFIG_SEC_S3VE_PROJECT) || defined(CONFIG_SEC_ATLANTIC_PROJECT) || defined(CONFIG_SEC_VICTOR_PROJECT) || \
+	defined(CONFIG_SEC_DEGAS_PROJECT) || defined(CONFIG_SEC_HESTIA_PROJECT) || defined(CONFIG_SEC_MEGA2_PROJECT) || \
+	defined(CONFIG_SEC_GNOTE_PROJECT) || defined(CONFIG_SEC_T10_PROJECT) || defined(CONFIG_SEC_T8_PROJECT) || \
+	defined(CONFIG_SEC_VASTA_PROJECT) || defined(CONFIG_SEC_VICTOR3GDSDTV_PROJECT) || defined(CONFIG_SEC_RUBENS_PROJECT) || \
+	defined(CONFIG_SEC_VASTALTE_CHN_CMMCC_DUOS_PROJECT)
 /* Dummy init function for models that use QUALCOMM PMIC PM8226 charger*/
 void __init samsung_init_battery(void)
 {
-	pr_err("%s: Battery init dummy, using PM8226 internal charger \n", __func__);
+	pr_err("%s: Battery init dummy, using QUALCOMM PM8226 internal BMS \n", __func__);
 };
 #else
 extern void __init samsung_init_battery(void);
 #endif
 #endif
-
+#if defined(CONFIG_MACH_AFYONLTE_TMO) || defined(CONFIG_MACH_AFYONLTE_CAN)
+extern void __init board_tsp_init(void);
+#endif
 void __init msm8226_init(void)
 {
 	struct of_dev_auxdata *adata = msm8226_auxdata_lookup;
@@ -208,6 +280,9 @@ void __init msm8226_init(void)
 	msm8226_add_drivers();
 #if defined(CONFIG_BATTERY_SAMSUNG)
 	samsung_init_battery();
+#endif
+#ifdef CONFIG_SENSORS_SSP
+	sensor_hub_init();
 #endif
 }
 

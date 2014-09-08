@@ -42,7 +42,7 @@
 #define LPASS_BE_SEC_MI2S_TX "SEC_MI2S_TX"
 #define LPASS_BE_PRI_MI2S_RX "PRI_MI2S_RX"
 #define LPASS_BE_PRI_MI2S_TX "PRI_MI2S_TX"
-#ifdef CONFIG_SND_SOC_MAX98504
+#if defined (CONFIG_SND_SOC_MAX98504) || defined (CONFIG_SND_SOC_MAX98505)
 #define LPASS_BE_TERT_MI2S_RX "TERT_MI2S_RX"
 #define LPASS_BE_TERT_MI2S_TX "TERT_MI2S_TX"
 #else
@@ -146,14 +146,29 @@ enum {
 	MSM_BACKEND_DAI_MAX,
 };
 
+enum msm_pcm_routing_event {
+	MSM_PCM_RT_EVT_BUF_RECFG,
+	MSM_PCM_RT_EVT_DEVSWITCH,
+	MSM_PCM_RT_EVT_MAX,
+};
+
 /* dai_id: front-end ID,
  * dspst_id:  DSP audio stream ID
  * stream_type: playback or capture
  */
-void msm_pcm_routing_reg_phy_stream(int fedai_id, bool perf_mode, int dspst_id,
+void msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode, int dspst_id,
 	int stream_type);
 void msm_pcm_routing_reg_psthr_stream(int fedai_id, int dspst_id,
 		int stream_type);
+
+struct msm_pcm_routing_evt {
+	void (*event_func)(enum msm_pcm_routing_event, void *);
+	void *priv_data;
+};
+
+void msm_pcm_routing_reg_phy_stream_v2(int fedai_id, bool perf_mode,
+				       int dspst_id, int stream_type,
+				       struct msm_pcm_routing_evt event_info);
 
 void msm_pcm_routing_dereg_phy_stream(int fedai_id, int stream_type);
 

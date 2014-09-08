@@ -38,12 +38,16 @@
 					"resin-bark", "kpdpwr-resin-bark";
 			qcom,pon-dbc-delay = <15625>;
 			qcom,system-reset;
-			qcom,s3-debounce = <32>;
+			qcom,s3-debounce = <128>;
 
 			qcom,pon_1 {
 				qcom,pon-type = <0>;
+				qcom,support-reset = <1>;
 				qcom,pull-up = <1>;
 				linux,code = <116>;
+				qcom,s1-timer = <6720>;
+				qcom,s2-timer = <1000>;
+				qcom,s2-type = <8>;
 			};
 
 			/* remove : volume down keyevent whenever power key event occurs */
@@ -62,15 +66,15 @@
 				qcom,support-reset = <1>;
 				qcom,pull-up = <1>;
 				qcom,s1-timer = <6720>;
-				qcom,s2-timer = <2000>;
-				qcom,s2-type = <7>;
+				qcom,s2-timer = <1000>;
+				qcom,s2-type = <8>;
 				qcom,use-bark;
 			};
 		};
 
 		pm8226_chg: qcom,charger {
 			spmi-dev-container;
-			compatible = "qcom,qpnp-charger";
+			compatible = "qcom,qpnp-charger", "qcom,leds-qpnp";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			status = "disabled";
@@ -97,32 +101,34 @@
 			qcom,warm-bat-mv = <4100>;
 			qcom,cool-bat-mv = <4100>;
 			qcom,ibatmax-cool-ma = <350>;
-			qcom,ext-ovp-present = <1>;
-
+			qcom,ovp-monitor-en = <1>;
+			sec,imax-ta = <1000>;
+			sec,imax-usb = <500>;
 			sec,charging-time = <360>;
 			sec,recharging-time = <90>;
 			sec,temp-high-block-event = <700>;
 			sec,temp-high-recover-event = <400>;
-			sec,temp-low-block-event = <50>;
+			sec,temp-low-block-event = <(-50)>;
 			sec,temp-low-recover-event = <0>;
 			sec,temp-high-block-normal = <600>;
 			sec,temp-high-recover-normal = <400>;
-			sec,temp-low-block-normal = <50>;
+			sec,temp-low-block-normal = <(-50)>;
 			sec,temp-low-recover-normal = <0>;
 			sec,temp-high-block-lpm = <600>;
 			sec,temp-high-recover-lpm = <400>;
-			sec,temp-low-block-lpm = <50>;
+			sec,temp-low-block-lpm = <(-50)>;
 			sec,temp-low-recover-lpm = <0>;
-			sec,event-check = <1>;
-			sec,event-waiting-time = <1>;
+			sec,event-check = <0>;
+			sec,event-waiting-time = <600>;
 			sec,capacity-max = <1000>;
 			sec,capacity-max-margin = <50>;
 			sec,capacity-min = <0>;
 			sec,ui-full-soc = <95>;
 			sec,ui-full-current = <170>;
+			sec,ui-full-voltage = <4250>;
 			sec,ui-full-count = <2>;
 			sec,charging-term-time = <40>;
-			sec,recharging-voltage = <4200>;
+			sec,recharging-voltage = <4300>;
 			sec,poweroff-check-soc = <1>;
 			sec,update-time = <60>;
 			sec,sleep-update-time = <300>;
@@ -235,11 +241,11 @@
 			qcom,low-voltage-calculate-soc-ms = <1000>;
 			qcom,low-soc-calculate-soc-ms = <5000>;
 			qcom,calculate-soc-ms = <20000>;
-			qcom,chg-term-ua = <100000>;
+			qcom,chg-term-ua = <200000>;
 			qcom,batt-type = <3>;
 			qcom,tm-temp-margin = <5000>;
 			qcom,low-ocv-correction-limit-uv = <100>;
-			qcom,high-ocv-correction-limit-uv = <50>;
+			qcom,high-ocv-correction-limit-uv = <250>;
 			qcom,hold-soc-est = <3>;
 			qcom,use-external-rsense;
 			qcom,low-voltage-threshold = <3420000>;
@@ -906,8 +912,7 @@
 			status = "okay";
 			reg = <0xd300 0x100>;
 			label = "flash";
-			flash-boost-supply = <&pm8226_chg_boost>;
-                        pm8226_flash0: qcom,flash_0 {
+			            pm8226_flash0: qcom,flash_0 {
                                 qcom,max-current = <1000>;
                                 qcom,default-state = "off";
                                 qcom,headroom = <3>;

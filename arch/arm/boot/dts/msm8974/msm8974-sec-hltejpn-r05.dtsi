@@ -61,7 +61,6 @@
 	mdss_mdp: qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "dsi";
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1F40000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
 		};
 	};
@@ -119,7 +118,7 @@
 			vcc_en-supply = <&pm8941_lvs3>;
 			cypress,scl-gpio = <&msmgpio 96 0x00>;
 			cypress,sda-gpio = <&msmgpio 95 0x00>;
-			cypress,irq-gpio = <&pm8941_gpios 29 0x1>;		
+			cypress,irq-gpio = <&pm8941_gpios 29 0x1>;
 			cypress,tkey-keycodes = <139 158>;
 			cypress,i2c-pull-up = <1>;
 		};
@@ -155,7 +154,7 @@
 		>;
 	};
 
-	i2c@25 {			
+	i2c@25 {
 		cell-index = <25>;
 		compatible = "i2c-gpio";
 		gpios = <&msmgpio 55 0 /* sda */
@@ -380,7 +379,7 @@
 		qcom,isdbtmm-gpio-rst = <&pm8941_gpios 31 0>;
 		qcom,isdbtmm-gpio-irq = <&msmgpio 73 0>;
 	};
-	
+
 	isdbtmm-spi {
 		compatible = "isdbtmm_spi_data";
 
@@ -581,7 +580,7 @@
 
 	earjack {
 		compatible = "sec_jack";
-		qcom,earjack-read-vadc = <&pm8941_vadc>;		
+		qcom,earjack-read-vadc = <&pm8941_vadc>;
 		qcom,earjack-detect-gpio = <&pm8941_gpios 22 0>;
 		qcom,earjack-micbias-gpio = <&pm8941_gpios 34 0>;
 		qcom,earjack-sendend-gpio = <&msmgpio 77 0>;
@@ -593,7 +592,7 @@
 		but-zones-list = <&but_zones 0 0 162>,
 						 <&but_zones 1 163 325>,
 						 <&but_zones 2 326 645>;
-		mpp-channel-scaling = <4 1 3>;							
+		mpp-channel-scaling = <4 1 3>;
 	};
 
 	usb2_otg_sw: regulator-tpd4s214 {
@@ -1021,12 +1020,12 @@
 	};
 
 	gpio@d000 { /* GPIO 17 */
-		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */ 
-		qcom,output-type = <0>;		/* QPNP_PIN_OUT_BUF_CMOS */ 
-		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */ 
-		qcom,vin-sel = <2>; 		/* QPNP_PIN_VIN2 */ 
-		qcom,out-strength = <3>;	/* QPNP_PIN_OUT_STRENGTH_HIGH */ 
-		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_2 : LPG8*/ 
+		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */
+		qcom,output-type = <0>;		/* QPNP_PIN_OUT_BUF_CMOS */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */
+		qcom,vin-sel = <2>; 		/* QPNP_PIN_VIN2 */
+		qcom,out-strength = <3>;	/* QPNP_PIN_OUT_STRENGTH_HIGH */
+		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_2 : LPG8*/
 		qcom,master-en = <1>;
 	};
 
@@ -1094,6 +1093,10 @@
 	};
 
 	gpio@d900 { /* GPIO 26 */
+		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */
+		qcom,vin-sel = <2>;		/* QPNP_PIN_VIN2 */
+		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_CONSTANT */
 	};
 
 	gpio@da00 { /* GPIO 27 */

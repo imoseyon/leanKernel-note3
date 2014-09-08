@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -42,6 +42,8 @@ static DEFINE_MUTEX(slim_lock);
 static DEFINE_IDR(ctrl_idr);
 static struct device_type slim_dev_type;
 static struct device_type slim_ctrl_type;
+
+extern unsigned int system_rev;
 
 static const struct slim_device_id *slim_match(const struct slim_device_id *id,
 					const struct slim_device *slim_dev)
@@ -313,14 +315,25 @@ static void slim_report(struct work_struct *work)
 			sbdrv->device_down(sbdev);
 		return;
 	}
-	if (sbdev->notified)
+	if (sbdev->notified || !sbdrv)
 		return;
 	ret = slim_get_logical_addr(sbdev, sbdev->e_addr, 6, &laddr);
+
+#if defined(CONFIG_MACH_KLTE_TMO) || defined(CONFIG_MACH_KLTE_CAN) || defined(CONFIG_MACH_KLTE_MTR)
+	if (system_rev == 0xd) {
+		pr_info("%s : system rev = %d\n", __func__, system_rev);
+		if ((ret == -ENXIO) &&
+			((sbdev->e_addr[4] == 0xbe) && (sbdev->e_addr[2] == 0x83))) {
+			pr_info("%s : es704 fail to assign retry to assign the es705\n", __func__);
+			sbdev->e_addr[2] = 0x03;
+			ret = slim_get_logical_addr(sbdev, sbdev->e_addr, 6, &laddr);		
+		}
+	}
+#endif
+
 	if (!ret) {
-		if (sbdrv)
-			sbdev->notified = true;
-		if (sbdrv->device_up)
-			sbdrv->device_up(sbdev);
+		sbdev->notified = true;
+		sbdrv->device_up(sbdev);
 	}
 }
 
@@ -668,9 +681,12 @@ void slim_msg_response(struct slim_controller *ctrl, u8 *reply, u8 tid, u8 len)
 
 	mutex_lock(&ctrl->m_ctrl);
 	txn = ctrl->txnt[tid];
-	if (txn == NULL) {
-		dev_err(&ctrl->dev, "Got response to invalid TID:%d, len:%d",
+	if (txn == NULL || txn->rbuf == NULL) {
+		if (txn == NULL)
+			dev_err(&ctrl->dev, "Got response to invalid TID:%d, len:%d",
 				tid, len);
+		else
+			dev_err(&ctrl->dev, "Invalid client buffer passed\n");
 		mutex_unlock(&ctrl->m_ctrl);
 		return;
 	}
@@ -1525,7 +1541,8 @@ static void slim_add_ch(struct slim_controller *ctrl, struct slim_ich *slc)
 	for (j = *len - 1; j > i; j--)
 		arr[j] = arr[j - 1];
 	arr[i] = slc;
-	ctrl->sched.usedslots += sl;
+	if (!ctrl->allocbw)
+		ctrl->sched.usedslots += sl;
 
 	return;
 }
@@ -1839,10 +1856,10 @@ int slim_dealloc_ch(struct slim_device *sb, u16 chanh)
 {
 	struct slim_controller *ctrl = sb->ctrl;
 	u8 chan = SLIM_HDL_TO_CHIDX(chanh);
-	struct slim_ich *slc = &ctrl->chans[chan];
+	struct slim_ich *slc;
 	if (!ctrl)
 		return -EINVAL;
-
+	slc = &ctrl->chans[chan];
 	mutex_lock(&ctrl->sched.m_reconf);
 	if (slc->state == SLIM_CH_FREE) {
 		mutex_unlock(&ctrl->sched.m_reconf);
@@ -2631,7 +2648,8 @@ static void slim_chan_changes(struct slim_device *sb, bool revert)
 				u32 sl = slc->seglen << slc->rootexp;
 				if (slc->coeff == SLIM_COEFF_3)
 					sl *= 3;
-				ctrl->sched.usedslots -= sl;
+				if (!ctrl->allocbw)
+					ctrl->sched.usedslots -= sl;
 				slim_remove_ch(ctrl, slc);
 				slc->state = SLIM_CH_DEFINED;
 			}
@@ -2652,7 +2670,8 @@ static void slim_chan_changes(struct slim_device *sb, bool revert)
 		if (revert || slc->def > 0) {
 			if (slc->coeff == SLIM_COEFF_3)
 				sl *= 3;
-			ctrl->sched.usedslots += sl;
+			if (!ctrl->allocbw)
+				ctrl->sched.usedslots += sl;
 			if (revert)
 				slc->def++;
 			slc->state = SLIM_CH_ACTIVE;
@@ -2746,7 +2765,8 @@ int slim_reconfigure_now(struct slim_device *sb)
 		u32 sl = slc->seglen << slc->rootexp;
 		if (slc->coeff == SLIM_COEFF_3)
 			sl *= 3;
-		ctrl->sched.usedslots -= sl;
+		if (!ctrl->allocbw)
+			ctrl->sched.usedslots -= sl;
 		slc->state = SLIM_CH_PENDING_REMOVAL;
 	}
 	list_for_each_entry(pch, &sb->mark_suspend, pending) {
@@ -3101,8 +3121,15 @@ int slim_ctrl_clk_pause(struct slim_controller *ctrl, bool wakeup, u8 restart)
 		 */
 		if (ctrl->clk_state == SLIM_CLK_PAUSED && ctrl->wakeup)
 			ret = ctrl->wakeup(ctrl);
+		/*
+		 * If wakeup fails, make sure that next attempt can succeed.
+		 * Since we already consumed pause_comp, complete it so
+		 * that next wakeup isn't blocked forever
+		 */
 		if (!ret)
 			ctrl->clk_state = SLIM_CLK_ACTIVE;
+		else
+			complete(&ctrl->pause_comp);
 		mutex_unlock(&ctrl->m_ctrl);
 		return ret;
 	} else {

@@ -85,6 +85,7 @@
 	};
 
 	bif_ctrl: qcom,bsi@1b00 {
+		status = "disabled";
 		compatible = "qcom,qpnp-bsi";
 		reg = <0x1b00 0x100>,
 		      <0x1208 0x1>;
@@ -136,7 +137,7 @@
 		qcom,low-voltage-threshold = <3420000>;
 		qcom,tm-temp-margin = <5000>;
 		qcom,low-ocv-correction-limit-uv = <100>;
-		qcom,high-ocv-correction-limit-uv = <50>;
+		qcom,high-ocv-correction-limit-uv = <250>;
 		qcom,hold-soc-est = <3>;
 		qcom,bms-vadc = <&pm8941_vadc>;
 		qcom,bms-iadc = <&pm8941_iadc>;
@@ -220,7 +221,9 @@
 		qcom,resume-soc = <99>;
 			qcom,tchg-mins = <150>;
 		qcom,chg-vadc = <&pm8941_vadc>;
+		qcom,chg-iadc = <&pm8941_iadc>;
 		qcom,chg-adc_tm = <&pm8941_adc_tm>;
+		qcom,ibat-calibration-enabled;
 
 		qcom,chgr@1000 {
 			status = "disabled";
@@ -700,6 +703,28 @@
 		chan@a {
 			label = "ref_1250v";
 			reg = <0xa>;
+			qcom,decimation = <0>;
+			qcom,pre-div-channel-scaling = <0>;
+			qcom,calibration-type = "absolute";
+			qcom,scale-function = <0>;
+			qcom,hw-settle-time = <0>;
+			qcom,fast-avg-setup = <0>;
+		};
+
+		chan@13 {
+			label = "mpp4_div1";
+			reg = <0x13>;
+			qcom,decimation = <0>;
+			qcom,pre-div-channel-scaling = <0>; /* 1:1 scaling */
+			qcom,calibration-type = "absolute";
+			qcom,scale-function = <0>;
+			qcom,hw-settle-time = <0>;
+			qcom,fast-avg-setup = <0>;
+		};
+		
+		chan@14 {
+			label = "v_battery_sense";
+			reg = <0x14>;
 			qcom,decimation = <0>;
 			qcom,pre-div-channel-scaling = <0>;
 			qcom,calibration-type = "absolute";

@@ -54,6 +54,9 @@
 #include "gadget.h"
 #include "debug.h"
 
+#if defined(CONFIG_MACH_HLTE_CHN_CMCC) || defined(CONFIG_MACH_JSGLTE_CHN_CMCC)
+extern unsigned int system_rev;
+#endif
 /* ADC threshold values */
 static int adc_low_threshold = 700;
 module_param(adc_low_threshold, int, S_IRUGO | S_IWUSR);
@@ -265,9 +268,10 @@ struct dwc3_msm {
 static struct usb_ext_notification *usb_ext;
 
 #if defined(CONFIG_SEC_VIENNA_PROJECT) || defined(CONFIG_SEC_V2_PROJECT) \
-|| defined(CONFIG_SEC_K_PROJECT) || defined(CONFIG_SEC_KACTIVE_PROJECT)
-int vienna_usb_rdrv_pin;
-EXPORT_SYMBOL(vienna_usb_rdrv_pin);
+|| defined(CONFIG_SEC_K_PROJECT) \
+|| defined(CONFIG_SEC_H_PROJECT) || defined(CONFIG_SEC_F_PROJECT)
+int sec_qcom_usb_rdrv;
+EXPORT_SYMBOL(sec_qcom_usb_rdrv);
 #endif
 
 /**
@@ -627,7 +631,7 @@ static int dwc3_msm_dbm_ep_config(struct dwc3_msm *mdwc, u8 usb_ep, u8 bam_pipe,
  */
 static int dwc3_msm_dbm_ep_unconfig(struct dwc3_msm *mdwc, u8 usb_ep)
 {
-	u8 dbm_ep;
+	int dbm_ep;
 	u32 data;
 
 	dev_dbg(mdwc->dev, "%s\n", __func__);
@@ -2149,7 +2153,7 @@ static void dwc3_resume_work(struct work_struct *w)
 #ifdef CONFIG_USB_DEBUG_DETEAILED_LOG
 	dev_info(mdwc->dev, "%s: dwc3 resume work\n", __func__);
 #else
-	dev_dbg(mdwc->dev, "%s: dwc3 resume work\n", __func__);
+	dev_info(mdwc->dev, "%s\n", __func__);
 #endif
 	/* handle any event that was queued while work was already running */
 	if (!atomic_read(&mdwc->in_lpm)) {
@@ -2158,6 +2162,7 @@ static void dwc3_resume_work(struct work_struct *w)
 #else
 		dev_dbg(mdwc->dev, "%s: notifying xceiv event\n", __func__);
 #endif
+		dev_info(mdwc->dev, "%s: already running\n", __func__);
 		if (mdwc->otg_xceiv) {
 			dwc3_wait_for_ext_chg_done(mdwc);
 			mdwc->ext_xceiv.notify_ext_events(mdwc->otg_xceiv->otg,
@@ -2168,8 +2173,10 @@ static void dwc3_resume_work(struct work_struct *w)
 
 	/* bail out if system resume in process, else initiate RESUME */
 	if (atomic_read(&mdwc->pm_suspended)) {
+		dev_info(mdwc->dev, "%s: mdwc->resume_pending true\n", __func__);
 		mdwc->resume_pending = true;
 	} else {
+		dev_info(mdwc->dev, "%s: pm_runtime_get_sync entered\n", __func__);
 		pm_runtime_get_sync(mdwc->dev);
 		if (mdwc->otg_xceiv)
 			mdwc->ext_xceiv.notify_ext_events(mdwc->otg_xceiv->otg,
@@ -2272,6 +2279,7 @@ error:
 
 static irqreturn_t msm_dwc3_irq(int irq, void *data)
 {
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	struct dwc3_msm *mdwc = data;
 
 	if (atomic_read(&mdwc->in_lpm)) {
@@ -2282,7 +2290,7 @@ static irqreturn_t msm_dwc3_irq(int irq, void *data)
 	} else {
 		pr_info_ratelimited("%s: IRQ outside LPM\n", __func__);
 	}
-
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -2332,6 +2340,8 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 	/* Process PMIC notification in PRESENT prop */
 	case POWER_SUPPLY_PROP_PRESENT:
 		dev_dbg(mdwc->dev, "%s: notify xceiv event\n", __func__);
+		dev_info(mdwc->dev, "%s: !mdwc->ext_inuse(%d), mdwc->ext_xceiv.otg_capability(%d), !init(%d)\n",
+			__func__, !mdwc->ext_inuse, mdwc->ext_xceiv.otg_capability, !init);
 		if (mdwc->otg_xceiv && !mdwc->ext_inuse &&
 		    (mdwc->ext_xceiv.otg_capability || !init)) {
 			mdwc->ext_xceiv.bsv = val->intval;
@@ -2339,6 +2349,7 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 			 * set debouncing delay to 120msec. Otherwise battery
 			 * charging CDP complaince test fails if delay > 120ms.
 			 */
+			dev_info(mdwc->dev, "%s: queue_delayed_work mdwc->resume_work\n", __func__);
 			queue_delayed_work(system_nrt_wq,
 							&mdwc->resume_work, 12);
 
@@ -2878,17 +2889,26 @@ static int __devinit dwc3_msm_probe(struct platform_device *pdev)
 	/* [Vienna only] For USB 3.0 redriver enable */
 	/* PM8914 MPP5 enable */
 #if defined(CONFIG_SEC_VIENNA_PROJECT) || defined(CONFIG_SEC_V2_PROJECT) \
-|| defined(CONFIG_SEC_K_PROJECT) || defined(CONFIG_SEC_KACTIVE_PROJECT)
+|| defined(CONFIG_SEC_K_PROJECT)
 
 	pr_info("Get USB 3.0 redriver GPIO address\n");
-	vienna_usb_rdrv_pin = of_get_named_gpio(node,	"qcom,gpio_usb_rdrv_en", 0);
-	if (vienna_usb_rdrv_pin < 0) {
-#if defined(CONFIG_SEC_K_PROJECT) || defined(CONFIG_SEC_KACTIVE_PROJECT)
-		of_property_read_u32(node,	"qcom,gpio_usb_rdrv_en", &vienna_usb_rdrv_pin);
-		if (vienna_usb_rdrv_pin < 0)
+	sec_qcom_usb_rdrv = of_get_named_gpio(node,	"qcom,gpio_usb_rdrv_en", 0);
+	if (sec_qcom_usb_rdrv < 0) {
+#if defined(CONFIG_SEC_K_PROJECT)
+		of_property_read_u32(node,	"qcom,gpio_usb_rdrv_en", &sec_qcom_usb_rdrv);
+		if (sec_qcom_usb_rdrv < 0)
 #endif
 			dev_err(&pdev->dev, "unable to get qcom,gpio_usb_rdrv_en\n");
 	}
+#endif
+
+#if defined(CONFIG_SEC_H_PROJECT) || defined(CONFIG_SEC_F_PROJECT)
+	sec_qcom_usb_rdrv = 129;
+#if defined(CONFIG_MACH_HLTE_CHN_CMCC)
+	if (system_rev >= 12) {
+		sec_qcom_usb_rdrv = 52;
+	}
+#endif
 #endif
 
 	mdwc->ssusb_vddcx = devm_regulator_get(&pdev->dev, "ssusb_vdd_dig");
@@ -3160,11 +3180,11 @@ static int __devinit dwc3_msm_probe(struct platform_device *pdev)
 		get_vbus_detect_gpio(mdwc, &pdev->dev);
 #endif
 
-#if defined(CONFIG_SEC_K_PROJECT) || defined(CONFIG_SEC_KACTIVE_PROJECT)
+#if defined(CONFIG_SEC_K_PROJECT)
 	/* set gpio to enable redriver for USB3.0 */
-	gpio_tlmm_config(GPIO_CFG(vienna_usb_rdrv_pin, 0, GPIO_CFG_OUTPUT,
+	gpio_tlmm_config(GPIO_CFG(sec_qcom_usb_rdrv, 0, GPIO_CFG_OUTPUT,
 					GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-	gpio_set_value(vienna_usb_rdrv_pin,0);
+	gpio_set_value(sec_qcom_usb_rdrv,0);
 #endif
 
 		/* Skip charger detection for simulator targets */

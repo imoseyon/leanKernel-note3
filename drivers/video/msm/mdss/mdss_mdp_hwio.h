@@ -20,7 +20,6 @@
 #define GC_LUT_SEGMENTS	16
 #define ENHIST_LUT_ENTRIES 256
 #define HIST_V_SIZE	256
-#define SIX_ZONE_LUT_ENTRIES 384
 
 #define MDSS_MDP_HW_REV_100		0x10000000
 #define MDSS_MDP_HW_REV_102		0x10020000
@@ -107,7 +106,9 @@ enum mdss_mdp_ctl_index {
 	MDSS_MDP_MAX_CTL
 };
 
-#define MDSS_MDP_REG_CTL_OFFSET(ctl) (0x00600 + ((ctl) * 0x100))
+#define MDSS_MDP_CTL_ADDRESS_OFFSET			0x100
+#define MDSS_MDP_REG_CTL_OFFSET(ctl) (0x00600 + ((ctl) * \
+					 MDSS_MDP_CTL_ADDRESS_OFFSET))
 
 #define MDSS_MDP_REG_CTL_LAYER(lm)			((lm) * 0x004)
 #define MDSS_MDP_REG_CTL_TOP				0x014
@@ -158,7 +159,10 @@ enum mdss_mdp_sspp_chroma_samp_type {
 	MDSS_MDP_CHROMA_420
 };
 
-#define MDSS_MDP_REG_SSPP_OFFSET(pipe) (0x01200 + ((pipe) * 0x400))
+
+#define MDSS_MDP_SSPP_ADDRESS_OFFSET			0x400
+#define MDSS_MDP_REG_SSPP_OFFSET(pipe) (0x01200 + ((pipe) * \
+					MDSS_MDP_SSPP_ADDRESS_OFFSET))
 
 #define MDSS_MDP_REG_SSPP_SRC_SIZE			0x000
 #define MDSS_MDP_REG_SSPP_SRC_IMG_SIZE			0x004
@@ -174,6 +178,7 @@ enum mdss_mdp_sspp_chroma_samp_type {
 #define MDSS_MDP_REG_SSPP_STILE_FRAME_SIZE		0x02C
 #define MDSS_MDP_REG_SSPP_SRC_FORMAT			0x030
 #define MDSS_MDP_REG_SSPP_SRC_UNPACK_PATTERN		0x034
+#define MDSS_MDP_REG_SSPP_SRC_CONSTANT_COLOR		0x03C
 #define MDSS_MDP_REG_SSPP_REQPRIO_FIFO_WM_0		0x050
 #define MDSS_MDP_REG_SSPP_REQPRIO_FIFO_WM_1		0x054
 #define MDSS_MDP_REG_SSPP_REQPRIO_FIFO_WM_2		0x058
@@ -272,12 +277,12 @@ enum mdss_mdp_stage_index {
 	MDSS_MDP_STAGE_1,
 	MDSS_MDP_STAGE_2,
 	MDSS_MDP_STAGE_3,
-	MDSS_MDP_STAGE_4,
 	MDSS_MDP_MAX_STAGE
 };
 
-#define MDSS_MDP_REG_LM_OFFSET(lm) (0x03200 + ((lm) * 0x400))
-
+#define MDSS_MDP_LM_ADDRESS_OFFSET			0x400
+#define MDSS_MDP_REG_LM_OFFSET(lm) (0x03200 + ((lm) * \
+					MDSS_MDP_LM_ADDRESS_OFFSET))
 #define MDSS_MDP_REG_LM_OP_MODE				0x000
 #define MDSS_MDP_REG_LM_OUT_SIZE			0x004
 #define MDSS_MDP_REG_LM_BORDER_COLOR_0			0x008
@@ -419,7 +424,9 @@ enum mdss_mdp_dspp_index {
 	MDSS_MDP_MAX_DSPP
 };
 
-#define MDSS_MDP_REG_DSPP_OFFSET(pipe)	(0x4600 + ((pipe) * 0x400))
+#define MDSS_MDP_DSPP_ADDRESS_OFFSET			0x400
+#define MDSS_MDP_REG_DSPP_OFFSET(pipe)	(0x4600 + ((pipe) * \
+					MDSS_MDP_DSPP_ADDRESS_OFFSET))
 #define MDSS_MDP_REG_DSPP_OP_MODE			0x000
 #define MDSS_MDP_REG_DSPP_PCC_BASE			0x030
 #define MDSS_MDP_REG_DSPP_DITHER_DEPTH			0x150

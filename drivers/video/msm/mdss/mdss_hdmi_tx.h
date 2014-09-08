@@ -57,6 +57,7 @@ struct hdmi_tx_ctrl {
 	struct hdmi_audio audio_data;
 
 	struct mutex mutex;
+	struct mutex lut_lock;
 	struct kobject *kobj;
 	struct switch_dev sdev;
 	struct switch_dev audio_sdev;
@@ -83,6 +84,7 @@ struct hdmi_tx_ctrl {
 
 	bool hdcp_feature_on;
 	u32 present_hdcp;
+
 	u8 spd_vendor_name[9];
 	u8 spd_product_description[17];
 
@@ -92,6 +94,9 @@ struct hdmi_tx_ctrl {
 	void *downstream_data;
 
 	void *feature_data[HDMI_TX_FEAT_MAX];
+#if defined (CONFIG_VIDEO_MHL_V2) || defined (CONFIG_VIDEO_MHL_SII8246)
+	int is_power_enabled[HDMI_TX_MAX_PM];
+#endif
 };
 
 #if defined (CONFIG_VIDEO_MHL_V2) || defined (CONFIG_VIDEO_MHL_SII8246)

@@ -70,6 +70,9 @@
 #include <linux/perf_event.h>
 #include <linux/random.h>
 
+#ifdef CONFIG_TIMA_RKP_COHERENT_TT
+#include <linux/memblock.h>
+#endif
 #include <asm/io.h>
 #include <asm/bugs.h>
 #include <asm/setup.h>
@@ -135,6 +138,7 @@ static char *ramdisk_execute_command;
 
 int boot_mode_lpm;
 int boot_mode_recovery;
+EXPORT_SYMBOL(boot_mode_recovery);
 
 /*
  * If set, this is an indication to the drivers that reset the underlying
@@ -452,9 +456,10 @@ static int __init do_early_param(char *param, char *val)
 			boot_mode_lpm = 1;
 		}
 	}
-	/* Check Recovery Mode */
+	/* Check Recovery Mode , 1: recovery mode, 2: factory reset mode(recovery)
+	                         otherwise normal mode*/
 	if ((strncmp(param, "androidboot.boot_recovery", 26) == 0)) {
-			if (strncmp(val, "1", 1) == 0) {
+	        if ((strncmp(val, "1", 1) == 0)||(strncmp(val, "2", 1) == 0)) {
 				pr_info("Recovery Boot Mode \n");
 				boot_mode_recovery = 1;
 			}
@@ -521,7 +526,7 @@ static void __init mm_init(void)
 	vmalloc_init();
 }
 
-#ifdef CONFIG_CRYPTO_FIPS
+#ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
 /* change@ksingh.sra-dallas - in kernel 3.4 and + 
  * the mmu clears the unused/unreserved memory with default RAM initial sticky 
  * bit data.
@@ -561,7 +566,7 @@ static void __init integrity_mem_reserve(void) {
 	printk(KERN_NOTICE "FIPS integrity_mem_reservoir = %ld\n", integrity_mem_reservoir);
 }
 // change@ksingh.sra-dallas - end
-#endif // CONFIG_CRYPTO_FIPS
+#endif // CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
 
 asmlinkage void __init start_kernel(void)
 {
@@ -612,12 +617,12 @@ asmlinkage void __init start_kernel(void)
 
 	jump_label_init();
 
-#ifdef CONFIG_CRYPTO_FIPS	
+#ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
 	/* change@ksingh.sra-dallas
 	 * marks the zImage copy area as reserve before mmu can clear it
 	 */
  	integrity_mem_reserve();
-#endif // CONFIG_CRYPTO_FIPS
+#endif // CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
 	/*
 	 * These use large bootmem allocations and must precede
 	 * kmem_cache_init()
@@ -906,6 +911,39 @@ static void run_init_process(const char *init_filename)
 	kernel_execve(init_filename, argv_init, envp_init);
 }
 
+#ifdef CONFIG_TIMA_RKP_30
+#define PGT_BIT_ARRAY_LENGTH 0x40000
+unsigned long pgt_bit_array[PGT_BIT_ARRAY_LENGTH];
+EXPORT_SYMBOL(pgt_bit_array);
+#endif
+#ifdef CONFIG_DEFERRED_INITCALLS
+extern initcall_t __deferred_initcall_start[], __deferred_initcall_end[];
+
+/* call deferred init routines */
+void __ref do_deferred_initcalls(void)
+{
+	initcall_t *call;
+	static int already_run=0;
+
+	if (already_run) {
+		printk("do_deferred_initcalls() has already run\n");
+		return;
+	}
+
+	already_run=1;
+
+	printk("Running do_deferred_initcalls()\n");
+
+	for(call = __deferred_initcall_start;
+	    call < __deferred_initcall_end; call++)
+		do_one_initcall(*call);
+
+	flush_scheduled_work();
+
+	free_initmem();
+}
+#endif
+
 /* This is a non __init function. Force it to be noinline otherwise gcc
  * makes it inline to init() and it becomes part of init.text section
  */
@@ -922,16 +960,20 @@ static noinline int init_post(void)
 
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
+#ifndef CONFIG_DEFERRED_INITCALLS
 	free_initmem();
+#endif
 	mark_rodata_ro();
+#ifdef CONFIG_TIMA_RKP
+#ifndef CONFIG_TIMA_RKP_30
+	tima_send_cmd4((unsigned long)_stext, (unsigned long)init_mm.pgd, (unsigned long)__init_begin, (unsigned long)__init_end, 0x3f80c221);
+#endif
+#endif
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
 
 
 	current->signal->flags |= SIGNAL_UNKILLABLE;
-#ifdef CONFIG_TIMA_RKP
-	tima_send_cmd4((unsigned long)_stext, (unsigned long)init_mm.pgd, (unsigned long)__init_begin, (unsigned long)__init_end, 0x3f80c221);
-#endif
 	if (ramdisk_execute_command) {
 		run_init_process(ramdisk_execute_command);
 		printk(KERN_WARNING "Failed to execute %s\n",
@@ -960,6 +1002,9 @@ static noinline int init_post(void)
 
 static int __init kernel_init(void * unused)
 {
+#ifdef CONFIG_TIMA_RKP_COHERENT_TT
+	struct memblock_type *type = (struct memblock_type*)(&memblock.memory);
+#endif
 	/*
 	 * Wait until kthreadd is all set-up.
 	 */
@@ -981,6 +1026,14 @@ static int __init kernel_init(void * unused)
 
 	smp_prepare_cpus(setup_max_cpus);
 
+#ifdef CONFIG_TIMA_RKP
+#ifdef CONFIG_TIMA_RKP_30
+#ifdef CONFIG_TIMA_RKP_COHERENT_TT
+	tima_send_cmd2(type->cnt, __pa(type->regions), 0x3f804221);
+#endif
+	tima_send_cmd5((unsigned long)_stext, (unsigned long)init_mm.pgd, (unsigned long)__init_begin, (unsigned long)__init_end,(unsigned long)__pa(pgt_bit_array),0x3f80c221);
+#endif
+#endif
 	do_pre_smp_initcalls();
 	lockup_detector_init();
 

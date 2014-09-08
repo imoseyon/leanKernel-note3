@@ -389,6 +389,8 @@ void mdss_edp_clk_debug(unsigned char *edp_base, unsigned char *mmss_cc_base);
 
 #if defined(CONFIG_FB_MSM_EDP_SAMSUNG)
 int aux_tx(int addr, char *data, int len);
+void tcon_interanl_clock(void);
+void read_firmware_version(char *string);
 void set_global_ep(struct mdss_edp_drv_pdata *ep);
 struct mdss_edp_drv_pdata *get_global_ep(void);
 

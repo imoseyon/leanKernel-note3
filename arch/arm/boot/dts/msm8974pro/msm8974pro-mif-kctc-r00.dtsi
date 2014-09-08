@@ -23,16 +23,20 @@
 		cell-index = <9>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg = <0xf9965000 0x1000>;
-		reg-names = "spi_physical";
-		interrupts = <0 103 0>;
-		interrupt-names = "spi_irq";
+		reg = <0xf9965000 0x1000>, <0xf9944000 0x19000>;
+		reg-names = "spi_physical", "spi_bam_physical";
+		interrupts = <0 103 0>, <0 239 0>;
+		interrupt-names = "spi_irq", "spi_bam_irq";
 		
 		qcom,gpio-mosi = <&msmgpio 49 0>;
 		qcom,gpio-miso = <&msmgpio 50 0>;
 		qcom,gpio-clk  = <&msmgpio 52 0>;
 		qcom,gpio-cs0  = <&msmgpio 51 0>;
 
+		qcom,use-bam;
+		qcom,bam-consumer-pipe-index = <16>;
+		qcom,bam-producer-pipe-index = <17>;
+		
 		qcom,infinite-mode = <0>;
 		qcom,ver-reg-exists;
 		qcom,master-id = <84>;
@@ -43,6 +47,12 @@
 			reg = <0>;
 			spi-max-frequency = <12000000>;
 			spi-cpha;
+
+			mif_spi,gpio_ipc_mrdy = <&msmgpio 105 0>;
+			mif_spi,gpio_ipc_sub_mrdy = <&msmgpio 106 0>;
+			mif_spi,gpio_ipc_srdy = <&msmgpio 117 0>;
+			mif_spi,gpio_ipc_sub_srdy = <&msmgpio 104 0>;
+			mif_spi,gpio_cp_dump_int = <&msmgpio 119 0>;
 		};
 	};
 

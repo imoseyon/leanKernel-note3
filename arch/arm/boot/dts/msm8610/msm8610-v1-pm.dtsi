@@ -160,7 +160,7 @@
 				qcom,ss-power = <315>;
 				qcom,energy-overhead = <1027150>;
 				qcom,time-overhead = <2400>;
-				qcom,min-cpu-mode= "spc";
+				qcom,min-cpu-mode= "standalone_pc";
 				qcom,sync-cpus;
 			};
 
@@ -302,6 +302,8 @@
 		qcom,pc-mode = "tz_l2_int";
 		qcom,use-sync-timer;
 		qcom,pc-resets-timer;
+		qcom,cpus-as-clocks;
+		qcom,synced-clocks;
 	};
 
 	qcom,cpu-sleep-status@f9088008{

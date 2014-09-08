@@ -70,6 +70,12 @@ static int restart_mode;
 void *restart_reason;
 #endif
 
+#ifdef CONFIG_USER_RESET_DEBUG
+#define RESET_CAUSE_LPM_REBOOT 0x95
+void *reboot_cause;
+extern int poweroff_charging;
+#endif
+
 int pmic_reset_irq;
 static void __iomem *msm_tmr0_base;
 
@@ -196,7 +202,7 @@ static void __msm_power_off(int lower_pshold)
 {
 	printk(KERN_CRIT "Powering off the SoC\n");
 
-#ifdef USE_RESTART_REASSON_DDR
+#ifdef CONFIG_RESTART_REASON_DDR
 	if(restart_reason_ddr_address) {
 		/* Clear the stale magic number present in DDR restart reason address*/
 		__raw_writel(0x00000000, restart_reason_ddr_address);
@@ -274,7 +280,7 @@ static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 static void msm_restart_prepare(const char *cmd)
 {
 	unsigned long value;
-#ifdef USE_RESTART_REASSON_DDR
+#ifdef CONFIG_RESTART_REASON_DDR
 	unsigned int save_restart_reason;
 #endif
 
@@ -355,7 +361,7 @@ static void msm_restart_prepare(const char *cmd)
 		} else if (!strncmp(cmd, "cpdebug", 7) /* set cp debug level */
 				&& !kstrtoul(cmd + 7, 0, &value)) {
 			__raw_writel(0xfedc0000 | value, restart_reason);
-#if defined(CONFIG_SWITCH_DUAL_MODEM)
+#if defined(CONFIG_SWITCH_DUAL_MODEM) || defined(CONFIG_MUIC_SUPPORT_RUSTPROOF)
 		} else if (!strncmp(cmd, "swsel", 5) /* set switch value */
 				&& !kstrtoul(cmd + 5, 0, &value)) {
 			__raw_writel(0xabce0000 | value, restart_reason);
@@ -386,11 +392,17 @@ static void msm_restart_prepare(const char *cmd)
 #ifdef CONFIG_SEC_DEBUG
 	else {
 		printk(KERN_NOTICE "%s: clear reset flag\n", __func__);
+#ifdef CONFIG_USER_RESET_DEBUG
+		if(poweroff_charging) {
+			reboot_cause = MSM_IMEM_BASE + 0x66C;
+			__raw_writel(RESET_CAUSE_LPM_REBOOT, reboot_cause);
+		}
+#endif
 		__raw_writel(0x12345678, restart_reason);
 	}
 #endif
 
-#ifdef USE_RESTART_REASSON_DDR
+#ifdef CONFIG_RESTART_REASON_DDR
 	if(restart_reason_ddr_address) {
 		 save_restart_reason = __raw_readl(restart_reason);
 		/* Writting NORMAL BOOT magic number to DDR address*/

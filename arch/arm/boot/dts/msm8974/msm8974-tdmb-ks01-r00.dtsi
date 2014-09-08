@@ -62,5 +62,7 @@
 		tdmb_rst = <&msmgpio 41 0>;
 		tdmb_irq = <&msmgpio 73 0>;
 		tdmb_ant_irq = <&msmgpio 18 0>;
+		tdmb_use_rst;
+		tdmb_use_irq;
 	};
 };

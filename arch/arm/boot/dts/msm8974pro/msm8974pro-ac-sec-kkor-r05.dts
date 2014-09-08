@@ -27,6 +27,18 @@
         /* [31:24] chip-id, [23:16] platform-id, [15:8] national code, [7:0] operator revision, reserved */
 };
 
+&soc {
+	qcom,wdt@f9017000 {
+		compatible = "qcom,msm-watchdog";
+		qcom,memblock-reserve = <0x0 0x4000>;
+		reg = <0xf9017000 0x1000>;
+		interrupts = <0 3 0>, <0 4 0>;
+		qcom,bark-time = <15000>;
+		qcom,pet-time = <10000>;
+		qcom,ipi-ping;
+	};
+};
+
 &pma8084_vadc {
 	chan@23 {
 		label = "mpp4_div3";

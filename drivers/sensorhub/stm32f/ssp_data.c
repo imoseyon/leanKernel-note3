@@ -100,24 +100,40 @@ static void get_pressure_sensordata(char *pchRcvDataFrame, int *iDataIdx,
 static void get_gesture_sensordata(char *pchRcvDataFrame, int *iDataIdx,
 	struct sensor_value *sensorsdata)
 {
+#if defined (CONFIG_SENSORS_SSP_MAX88920)
+	memcpy(sensorsdata, pchRcvDataFrame + *iDataIdx, 18);
+	*iDataIdx += 18;
+#else
 	memcpy(sensorsdata, pchRcvDataFrame + *iDataIdx, 38);
 	*iDataIdx += 38;
+#endif
 }
 
 static void get_proximity_sensordata(char *pchRcvDataFrame, int *iDataIdx,
 	struct sensor_value *sensorsdata)
 {
 	memset(&sensorsdata->prox[0], 0, 2);
+#if defined (CONFIG_SENSORS_SSP_MAX88920)
+	memcpy(&sensorsdata->prox[0], pchRcvDataFrame + *iDataIdx, 2);
+	//memcpy(&sensorsdata->prox[1], pchRcvDataFrame + *iDataIdx + 1, 1);
+	*iDataIdx += 2;
+#else
 	memcpy(&sensorsdata->prox[0], pchRcvDataFrame + *iDataIdx, 1);
 	memcpy(&sensorsdata->prox[1], pchRcvDataFrame + *iDataIdx + 1, 2);
 	*iDataIdx += 3;
+#endif
 }
 
 static void get_proximity_rawdata(char *pchRcvDataFrame, int *iDataIdx,
 	struct sensor_value *sensorsdata)
 {
+#if defined (CONFIG_SENSORS_SSP_MAX88920)
+	memcpy(&sensorsdata->prox[0], pchRcvDataFrame + *iDataIdx, 1);
+	*iDataIdx += 1;
+#else
 	memcpy(&sensorsdata->prox[0], pchRcvDataFrame + *iDataIdx, 2);
 	*iDataIdx += 2;
+#endif
 }
 
 static void get_geomagnetic_rawdata(char *pchRcvDataFrame, int *iDataIdx,

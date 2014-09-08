@@ -404,7 +404,7 @@ static int __devinit msm_vidc_probe(struct platform_device *pdev)
 	rc = v4l2_device_register(&pdev->dev, &core->v4l2_dev);
 	if (rc) {
 		dprintk(VIDC_ERR, "Failed to register v4l2 device\n");
-		goto err_v4l2_register;
+		goto err_v4l2_register_del_dev_file;
 	}
 	core->vdev[MSM_VIDC_DECODER].vdev.release =
 		msm_vidc_release_video_device;
@@ -486,6 +486,8 @@ err_dec_attr_link_name:
 	video_unregister_device(&core->vdev[MSM_VIDC_DECODER].vdev);
 err_dec_register:
 	v4l2_device_unregister(&core->v4l2_dev);
+err_v4l2_register_del_dev_file:
+	device_remove_file(&pdev->dev, &dev_attr_pwr_collapse_delay);
 err_v4l2_register:
 	kfree(core);
 err_no_mem:

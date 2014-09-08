@@ -26,6 +26,18 @@
         /* [31:24] chip-id, [23:16] platform-id, [15:8] national code, [7:0] operator revision, reserved */
 };
 
+&soc {
+	qcom,wdt@f9017000 {
+		compatible = "qcom,msm-watchdog";
+		qcom,memblock-reserve = <0x0 0x4000>;
+		reg = <0xf9017000 0x1000>;
+		interrupts = <0 3 0>, <0 4 0>;
+		qcom,bark-time = <15000>;
+		qcom,pet-time = <10000>;
+		qcom,ipi-ping;
+	};
+};
+
 &sdhc_1 {
 	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000 400000000>;
 };

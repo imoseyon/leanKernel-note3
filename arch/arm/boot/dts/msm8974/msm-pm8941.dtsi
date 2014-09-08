@@ -61,8 +61,7 @@
 			linux,code = <116>;
 		};
 
-		/* remove : volume down keyevent whenever power key event occurs */
-		/* qcom,pon_2 {
+		qcom,pon_2 {
 			qcom,pon-type = <1>;
 			qcom,support-reset = <1>;
 			qcom,pull-up = <1>;
@@ -71,7 +70,7 @@
 			qcom,s2-type = <1>;
 			linux,code = <114>;
 			qcom,use-bark;
-		}; */
+		};
 
 		qcom,pon_3 {
 			qcom,pon-type = <3>;
@@ -136,7 +135,7 @@
 		qcom,low-voltage-threshold = <3420000>;
 		qcom,tm-temp-margin = <5000>;
 		qcom,low-ocv-correction-limit-uv = <100>;
-		qcom,high-ocv-correction-limit-uv = <50>;
+		qcom,high-ocv-correction-limit-uv = <250>;
 		qcom,hold-soc-est = <3>;
 		qcom,bms-vadc = <&pm8941_vadc>;
 		qcom,bms-iadc = <&pm8941_iadc>;
@@ -210,7 +209,9 @@
 		qcom,resume-soc = <99>;
 		qcom,tchg-mins = <150>;
 		qcom,chg-vadc = <&pm8941_vadc>;
+		qcom,chg-iadc = <&pm8941_iadc>;
 		qcom,chg-adc_tm = <&pm8941_adc_tm>;
+		qcom,ibat-calibration-enabled;
 
 		qcom,chgr@1000 {
 			status = "disabled";

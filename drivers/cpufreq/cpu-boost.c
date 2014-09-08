@@ -196,11 +196,14 @@ static int boost_mig_sync_thread(void *data)
 		if (ret)
 			continue;
 
-		if (src_policy.min == src_policy.cur &&
-				src_policy.min <= dest_policy.min){
+		if (dest_policy.cur >= src_policy.cur ) {
+			pr_debug("No sync. CPU%d@%dKHz >= CPU%d@%dKHz\n",
+				 dest_cpu, dest_policy.cur, src_cpu, src_policy.cur);
 			continue;
 		}
 
+		if (sync_threshold && (dest_policy.cur >= sync_threshold))
+			continue;
 
 		cancel_delayed_work_sync(&s->boost_rem);
 		if (sync_threshold) {
@@ -217,9 +220,13 @@ static int boost_mig_sync_thread(void *data)
 		cpufreq_update_policy(src_cpu);
 #if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM8974PRO)
 		get_online_cpus();
-		if (cpu_online(dest_cpu))
+		if (cpu_online(dest_cpu)) {
 			queue_delayed_work_on(dest_cpu, cpu_boost_wq,
 				&s->boost_rem, msecs_to_jiffies(boost_ms));
+		} else {
+			s->boost_min = 0;
+			pr_debug("Resetting boost_min to 0\n");
+		}
 		put_online_cpus();
 #else
 		queue_delayed_work_on(s->cpu, cpu_boost_wq,

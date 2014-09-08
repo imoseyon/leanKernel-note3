@@ -13,6 +13,7 @@
 /include/ "msm8974pro-sii8240_mhl-k-r02.dtsi"
 /include/ "msm8974pro-camera-sensor-kjpn-r04.dtsi"
 /include/ "msm8974pro-fingerprint-sensor-k-r03.dtsi"
+/include/ "msm8974pro-w1.dtsi"
 
 / {
 	aliases {
@@ -26,7 +27,7 @@
 	serial@f991e000 {
 		status = "ok";
 	};
-	
+
 	serial@f995d000 {
 		status = "ok";
 	};
@@ -45,8 +46,6 @@
 	};
 
 	i2c@f9924000 {
-	qcom,scl-gpio = <&msmgpio 7 0>;
-	qcom,sda-gpio = <&msmgpio 6 0>;
 
 	synaptics_rmi4_i2c@20 {
 			compatible = "synaptics,rmi4-ts";
@@ -56,6 +55,8 @@
 			vcc_en-supply = <&pma8084_lvs2>;
 			synaptics,supply-num = <2>;		/* the number of regulators */
 			synaptics,supply-name = "max77826_ldo13", "8084_lvs2";	/* the name of regulators, in power-on order */
+			synaptics,scl-gpio = <&msmgpio 7 0x00>;
+			synaptics,sda-gpio = <&msmgpio 6 0x00>;
 			synaptics,irq-gpio = <&pma8084_gpios 8 0x1>;
 			synaptics,tsp-coords = <1079 1919>;
 			synaptics,i2c-pull-up = <1>;
@@ -193,16 +194,16 @@
 	/* FeliCa Changes Start */
 	i2c@f9925000 {  /*BLSP 3*/
 
-		gpios = <&msmgpio 10 0>, /* sda */
-				<&msmgpio 11 0>; /* scl */
+		qcom,scl-gpio =  <&msmgpio 11 0>;
+		qcom,sda-gpio = <&msmgpio 10 0>;
 
 		felica_i2c@2b {
 			compatible = "felica,felica-i2c";
 			reg = <0x2b>;
 		};
 	};
-	
-	
+
+
 	aliases {
 		serial2 = &uart6;       // This device will be called ttyHSL2
 	};
@@ -216,7 +217,7 @@
 		qcom,tx-gpio = <&msmgpio 49 0x00>;
 		qcom,rx-gpio = <&msmgpio 50 0x00>;
 	};
-	
+
 	felica_gpio{			// For FeliCa PON configuration on PMC8974. pm8974_gpios exits is the assumption.
 		compatible = "felica,gpio-table";
 		felica,pon-gpio = <&pma8084_gpios 19 0x00>;
@@ -263,13 +264,6 @@
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
-	};
-
-	onewire {
-		compatible = "w1-gpio-msm";
-		gpios = <&msmgpio 69 0x00>;
-		linux,open-drain = <1>;
-		linux,slave-speed = <1>;
 	};
 
 	spi@f9923000 {
@@ -352,22 +346,22 @@
 	mdss_dsi0: qcom,mdss_dsi@fd922800 {
 		iovdd-supply = <&pma8084_lvs4>;
 		qcom,dsi-pref-prim-pan-dual = <&dsi_dual_samsung_cmd_0>;
-		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;		
+		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;
 	};
-	
+
 	mdss_dsi1: qcom,mdss_dsi@fd922e00 {
 		qcom,dsi-pref-prim-pan-dual = <&dsi_dual_samsung_cmd_1>;
 	};
 
 	qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "dsi";
-		
+
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* 0 MB allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1000000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
+			qcom,memblock-reserve = <0x03200000 0x00F00000>;
 			qcom,mdss-fb-split = <720 720>;
 		};
-		
+
 	};
 
 	qcom,ssusb@f9200000 {
@@ -441,13 +435,13 @@
 		qcom,earjack-sendend-gpio = <&msmgpio 77 0>;
 		qcom,earjack-fsa_en-expander-gpio = <310>;
 		qcom,send-end-active-high;
-		det-zones-list = <&det_zones 3 10000 10 0>,
-						 <&det_zones 930 10000 10 0>,
-						 <&det_zones 2400 10000 10 1>,
-						 <&det_zones 9999 10000 10 1>;
-		but-zones-list = <&but_zones 0 0 145>,
-						 <&but_zones 1 146 310>,
-						 <&but_zones 2 311 640>;
+		det-zones-list = <&det_zones 3 10000 10 2>,
+						 <&det_zones 930 10000 10 2>,
+						 <&det_zones 2380 10000 10 1>,
+						 <&det_zones 9999 10000 10 4>;
+		but-zones-list = <&but_zones 0 0 155>,
+						 <&but_zones 1 156 305>,
+						 <&but_zones 2 306 643>;
 		mpp-channel-scaling = <4 1 3>;
 	};
 
@@ -766,12 +760,11 @@
 	};
 
 	gpio@c900 { /* GPIO 10 */
-		/* NFC clock request */
+		/* Felica HSEL */
 		status="ok";
-		qcom,mode = <0>;		/* Digital input */
-		qcom,pull = <4>;		/* Pull down */
-		qcom,src-sel = <0>;		/* Function 1  */
-		qcom,vin-sel = <2>;
+		qcom,mode = <1>;		/* Digital output */
+		qcom,output-type = <0>;		/* CMOS logic */
+		qcom,pull = <5>;		/* Pull NONE */
 		qcom,master-en = <1>;
 	};
 
@@ -838,11 +831,11 @@
 		/* LCD_RESET */
 		qcom,mode = <1>;		/* Digital output */
 		qcom,pull = <5>;		/* Pull down */
-		qcom,output-type = <0>;		/* CMOS */		
+		qcom,output-type = <0>;		/* CMOS */
 		qcom,vin-sel = <2>;		/* PMA8084 S4 = 1.8 V */
 		qcom,out-strength = <1>;	/* Low */
 		qcom,src-sel = <0>;		/* constant */
-		qcom,master-en = <1>;	
+		qcom,master-en = <1>;
 	};
 
 	gpio@d100 { /* GPIO 18 */
@@ -860,7 +853,7 @@
 	gpio@d300 { /* GPIO 20 */
 		/* Headset Det */
 		qcom,mode = <0>;		/* iutput */
-		qcom,pull = <5>;		/* Pull down */		
+		qcom,pull = <5>;		/* Pull down */
 		qcom,vin-sel = <2>;	/* PMA8084 S4 = 1.8 V */
 		qcom,src-sel = <0>;	/* Constant */
 		qcom,master-en = <1>;
@@ -976,6 +969,10 @@
 		es705-slim-ifd = "es705-ifd";
 		es705-slim-ifd-elemental-addr = [00 00 03 00 BE 02];
 	};
+};
+
+&usb3 {
+	qcom,gpio_usb_rdrv_en = <312>;
 };
 
 &spmi_bus {

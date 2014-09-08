@@ -117,7 +117,7 @@
 		};
 
 		vol_down {
-			lable = "volume_down";
+			label = "volume_down";
 			gpios = <&msmgpio 107 0x1>;
 			linux,input-type = <1>;
 			linux,code = <114>;

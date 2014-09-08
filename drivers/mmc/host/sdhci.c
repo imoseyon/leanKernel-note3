@@ -39,13 +39,17 @@
 
 #if defined(CONFIG_LEDS_CLASS) || (defined(CONFIG_LEDS_CLASS_MODULE) && \
 	defined(CONFIG_MMC_SDHCI_MODULE))
+#if !defined(CONFIG_SEC_K_PROJECT) && !defined(CONFIG_SEC_H_PROJECT) && !defined(CONFIG_SEC_FRESCO_PROJECT)
 #define SDHCI_USE_LEDS_CLASS
+#endif
 #endif
 
 #define MAX_TUNING_LOOP 40
 
 static unsigned int debug_quirks = 0;
 static unsigned int debug_quirks2;
+
+extern unsigned int system_rev;
 
 static void sdhci_finish_data(struct sdhci_host *);
 
@@ -173,6 +177,11 @@ static void sdhci_dump_state(struct sdhci_host *host)
 		mmc_hostname(mmc), mmc->parent->power.runtime_status,
 		atomic_read(&mmc->parent->power.usage_count),
 		mmc->parent->power.disable_depth);
+	if (mmc->card) {
+		pr_info("%s: card->cid : %08x%08x%08x%08x\n", mmc_hostname(mmc), 
+				mmc->card->raw_cid[0], mmc->card->raw_cid[1], 
+				mmc->card->raw_cid[2], mmc->card->raw_cid[3]);
+	}
 }
 
 static void sdhci_dumpregs(struct sdhci_host *host)
@@ -1171,7 +1180,7 @@ static void sdhci_finish_data(struct sdhci_host *host)
 		tasklet_schedule(&host->finish_tasklet);
 }
 
-#define SDHCI_REQUEST_TIMEOUT	10 /* Default request timeout in seconds */
+#define SDHCI_REQUEST_TIMEOUT	20 /* Default request timeout in seconds */
 
 static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 {
@@ -1622,7 +1631,8 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		mrq->cmd->error = -EIO;
 		if (mrq->data)
 			mrq->data->error = -EIO;
-		tasklet_schedule(&host->finish_tasklet);
+		mmc_request_done(host->mmc, mrq);
+		sdhci_runtime_pm_put(host);
 		return;
 	}
 
@@ -1729,6 +1739,7 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 	unsigned long flags;
 	int vdd_bit = -1;
 	u8 ctrl;
+	int ret;
 
 	mutex_lock(&host->ios_mutex);
 	if (host->flags & SDHCI_DEVICE_DEAD) {
@@ -1760,6 +1771,30 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		}
 	}
 
+	/*
+	 * The controller clocks may be off during power-up and we may end up
+	 * enabling card clock before giving power to the card. Hence, during
+	 * MMC_POWER_UP enable the controller clock and turn-on the regulators.
+	 * The mmc_power_up would provide the necessary delay before turning on
+	 * the clocks to the card.
+	 */
+	if (ios->power_mode & MMC_POWER_UP) {
+		if (host->ops->enable_controller_clock) {
+			ret = host->ops->enable_controller_clock(host);
+			if (ret) {
+				pr_err("%s: enabling controller clock: failed: %d\n",
+						mmc_hostname(host->mmc), ret);
+			} else {
+				vdd_bit = sdhci_set_power(host, ios->vdd);
+
+				if (host->vmmc && vdd_bit != -1)
+					mmc_regulator_set_ocr(host->mmc,
+							host->vmmc,
+							vdd_bit);
+			}
+		}
+	}
+
 	spin_lock_irqsave(&host->lock, flags);
 	if (!host->clock) {
 		sdhci_cfg_irq(host, true);
@@ -1769,14 +1804,15 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 	}
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	if (ios->power_mode & (MMC_POWER_UP | MMC_POWER_ON))
+	if (!host->ops->enable_controller_clock && (ios->power_mode &
+				(MMC_POWER_UP | MMC_POWER_ON))) {
 		vdd_bit = sdhci_set_power(host, ios->vdd);
 
-	if (host->vmmc && vdd_bit != -1)
-		mmc_regulator_set_ocr(host->mmc, host->vmmc, vdd_bit);
+		if (host->vmmc && vdd_bit != -1)
+			mmc_regulator_set_ocr(host->mmc, host->vmmc, vdd_bit);
+	}
 
 	spin_lock_irqsave(&host->lock, flags);
-
 	if (host->ops->platform_send_init_74_clocks)
 		host->ops->platform_send_init_74_clocks(host, ios->power_mode);
 
@@ -3306,12 +3342,27 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	caps[1] = (host->version >= SDHCI_SPEC_300) ?
 		sdhci_readl(host, SDHCI_CAPABILITIES_1) : 0;
-
+	#if defined(CONFIG_MACH_JSGLTE_CHN_CMCC)
+	if(strcmp(host->hw_name, "msm_sdcc.2") == 0) {
+	#else
 	if(strcmp(host->hw_name, "msm_sdcc.3") == 0) {
+	#endif
 		/* Custom: An external level shifter on SDC3 */
 		caps[0] |= (SDHCI_CAN_VDD_330 | SDHCI_CAN_VDD_300 | SDHCI_CAN_VDD_180);
-		/* disable SD 3.0 feature */
+		/* 
+		 * Disable SD 3.0 feature 
+		 * But, 8974pro after HW_GPIO_06 uses SDR50 Mode 
+		 */
+#ifdef CONFIG_SEC_K_PROJECT
+		if (system_rev >= 6) {
+			caps[1] &= (u32) ~(SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_DDR50);
+			caps[1] |= (u32) (SDHCI_SUPPORT_SDR50);
+		}
+		else
+			caps[1] &= (u32) ~(SDHCI_SUPPORT_SDR50 |SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_DDR50);
+#else
 		caps[1] &= (u32) ~(SDHCI_SUPPORT_SDR50 |SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_DDR50);
+#endif
 	}
 
 	if (host->quirks & SDHCI_QUIRK_FORCE_DMA)

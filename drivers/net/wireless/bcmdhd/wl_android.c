@@ -366,6 +366,7 @@ extern int set_roamscan_channel_list(struct net_device *dev, unsigned char n,
 extern int bcm_bt_lock(int cookie);
 extern void bcm_bt_unlock(int cookie);
 static int lock_cookie_wifi = 'W' | 'i'<<8 | 'F'<<16 | 'i'<<24;	/* cookie is "WiFi" */
+static bool is4335_revb0 = true;
 #endif /* ENABLE_4335BT_WAR */
 
 extern bool ap_fw_loaded;
@@ -3098,6 +3099,34 @@ exit:
 	return ret;
 }
 
+#ifdef ENABLE_4335BT_WAR
+void check_bcm4335_rev(void)
+{
+	int ret = -1;
+	struct file *fp = NULL;
+	char *filepath = "/data/.rev";
+	char chip_rev[10]={0,};
+
+	printk("check BCM4335, check_bcm4335_rev \n");
+	fp = filp_open(filepath, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+		printk("/data/.rev file open error\n");
+		is4335_revb0 = true;
+
+	} else {
+		printk("/data/.rev file Found\n");
+		ret = kernel_read(fp, 0, (char *)chip_rev, 9);
+		if(ret != -1 && NULL != strstr(chip_rev,"BCM4335B0")) {
+			printk("Found BCM4335B0\n");
+			is4335_revb0 = true;
+		} else {
+			is4335_revb0 = false;
+		}
+		filp_close(fp, NULL);
+	}
+}
+#endif
+
 int wl_android_init(void)
 {
 	int ret = 0;
@@ -3111,6 +3140,10 @@ int wl_android_init(void)
 		bcm_strncpy_s(iface_name, IFNAMSIZ, "wlan", IFNAMSIZ);
 	}
 #endif 
+
+#ifdef ENABLE_4335BT_WAR
+	check_bcm4335_rev();
+#endif
 
 #ifdef WL_GENL
 	wl_genl_init();
@@ -3483,7 +3516,12 @@ int wifi_set_power(int on, unsigned long msec)
 			bcm_bt_unlock(lock_cookie_wifi);
 		}
 #endif /* ENABLE_4335BT_WAR */
+
+#ifdef ENABLE_4335BT_WAR
+		ret = wifi_control_data->set_power(on,is4335_revb0);
+#else
 		ret = wifi_control_data->set_power(on);
+#endif
 	}
 
 	if (wifi_regulator && !on)

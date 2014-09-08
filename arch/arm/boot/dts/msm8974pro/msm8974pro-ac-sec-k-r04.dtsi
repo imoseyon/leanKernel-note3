@@ -13,6 +13,7 @@
 /include/ "msm8974pro-sii8240_mhl-k-r02.dtsi"
 /include/ "msm8974pro-camera-sensor-k-r04.dtsi"
 /include/ "msm8974pro-fingerprint-sensor-k-r03.dtsi"
+/include/ "msm8974pro-w1.dtsi"
 
 / {
 	aliases {
@@ -26,7 +27,7 @@
 	serial@f991e000 {
 		status = "ok";
 	};
-	
+
 	serial@f995d000 {
 		status = "ok";
 	};
@@ -45,8 +46,6 @@
 	};
 
 	i2c@f9924000 {
-		qcom,scl-gpio = <&msmgpio 7 0>;
-		qcom,sda-gpio = <&msmgpio 6 0>;
 
 		synaptics_rmi4_i2c@20 {
 			compatible = "synaptics,rmi4-ts";
@@ -56,6 +55,8 @@
 			vcc_en-supply = <&pma8084_lvs2>;
 			synaptics,supply-num = <2>;		/* the number of regulators */
 			synaptics,supply-name = "max77826_ldo13", "8084_lvs2";	/* the name of regulators, in power-on order */
+			synaptics,scl-gpio = <&msmgpio 7 0x00>;
+			synaptics,sda-gpio = <&msmgpio 6 0x00>;
 			synaptics,irq-gpio = <&pma8084_gpios 8 0x1>;
 			synaptics,tsp-coords = <1079 1919>;
 			synaptics,i2c-pull-up = <1>;
@@ -187,6 +188,9 @@
 			irda_ice40,irq-gpio = <&msmgpio 101 0x00>;
 			irda_ice40,cresetb = <&msmgpio 92 0x00>;
 			irda_ice40,i2c-pull-up = <1>;
+			/* only use usa_vzw tunable ant */
+			tunable,support = <0>;
+			tunable,cresetb = <&msmgpio 50 0x00>;
 		};
 	};
 
@@ -227,13 +231,6 @@
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
-	};
-
-	onewire {
-		compatible = "w1-gpio-msm";
-		gpios = <&msmgpio 69 0x00>;
-		linux,open-drain = <1>;
-		linux,slave-speed = <1>;
 	};
 
 	spi@f9923000 {
@@ -334,24 +331,25 @@
 	mdss_dsi0: qcom,mdss_dsi@fd922800 {
 		iovdd-supply = <&pma8084_lvs4>;
 		qcom,dsi-pref-prim-pan-dual = <&dsi_dual_samsung_cmd_0>;
-		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;		
+		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;
+		qcom,dsi-pref-prim-pan-magna = <&dsi_samsung_fhd_k_mag>;			
 	};
-	
+
 	mdss_dsi1: qcom,mdss_dsi@fd922e00 {
 		qcom,dsi-pref-prim-pan-dual = <&dsi_dual_samsung_cmd_1>;
 	};
 
 	qcom,mdss_mdp@fd900000 {
 		qcom,mdss-pref-prim-intf = "dsi";
-		
+
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* 0 MB allocaed for fb0 */
-			qcom,memory-alt-reservation-size = <0x1000000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
+			qcom,memory-alt-reservation-size = <0x1F00000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
+			qcom,memblock-reserve = <0x03200000 0x00F00000>;
 			qcom,mdss-fb-split = <720 720>;
 		};
-		
+
 	};
-	
+
 	qcom,ssusb@f9200000 {
 		/*vbus_dwc3-supply = <&pm8941_mvs1>;*/
 	};
@@ -359,7 +357,7 @@
 	qcom,hdmi_tx@fd922100 {
 		status = "ok";
 	};
-	
+
 	uart1: uart@f991d000 {
 		compatible = "qcom,msm-hsuart-v14";
 		status = "ok";
@@ -382,7 +380,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps = <86 512 0 0>, <86 512 500 800>;
 	};
-	
+
 	sound {
 		qcom,model = "msm8974-taiko-mtp-snd-card";
 		qcom,cdc-micbias2-headset-only;
@@ -744,6 +742,7 @@
 		/* Touchscreen external LDO enable */
 		qcom,mode = <1>;		/* Digital output */
 		qcom,out-strength = <1>;	/* Low */
+		qcom,vin-sel = <2>;		/* PMA8084 S4 = 1.8 V */
 		qcom,src-sel = <2>;		/* Function 1  */
 		qcom,master-en = <1>;
 	};
@@ -823,11 +822,11 @@
 		/* LCD_RESET */
 		qcom,mode = <1>;		/* Digital output */
 		qcom,pull = <5>;		/* Pull down */
-		qcom,output-type = <0>;		/* CMOS */		
+		qcom,output-type = <0>;		/* CMOS */
 		qcom,vin-sel = <2>;		/* PMA8084 S4 = 1.8 V */
 		qcom,out-strength = <1>;	/* Low */
 		qcom,src-sel = <0>;		/* constant */
-		qcom,master-en = <1>;	
+		qcom,master-en = <1>;
 	};
 
 	gpio@d100 { /* GPIO 18 */
@@ -845,7 +844,7 @@
 	gpio@d300 { /* GPIO 20 */
 		/* Headset Det */
 		qcom,mode = <0>;		/* iutput */
-		qcom,pull = <5>;		/* Pull down */		
+		qcom,pull = <5>;		/* Pull down */
 		qcom,vin-sel = <2>;	/* PMA8084 S4 = 1.8 V */
 		qcom,src-sel = <0>;	/* Constant */
 		qcom,master-en = <1>;

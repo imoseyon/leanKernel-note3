@@ -132,6 +132,9 @@ void kgsl_pwrctrl_buslevel_update(struct kgsl_device *device,
 	int buslevel = 0;
 	if (!pwr->pcl)
 		return;
+	/* the bus should be ON to update the active frequency */
+	if (on && !(test_bit(KGSL_PWRFLAGS_AXI_ON, &pwr->power_flags)))
+		return;
 	/*
 	 * If the bus should remain on calculate our request and submit it,
 	 * otherwise request bus level 0, off.
@@ -175,11 +178,10 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	pwr->bus_mod = 0;
 	pwrlevel = &pwr->pwrlevels[pwr->active_pwrlevel];
 
-	if (test_bit(KGSL_PWRFLAGS_AXI_ON, &pwr->power_flags)) {
-		kgsl_pwrctrl_buslevel_update(device, true);
+	kgsl_pwrctrl_buslevel_update(device, true);
+	if (test_bit(KGSL_PWRFLAGS_AXI_ON, &pwr->power_flags))
 		if (pwr->ebi1_clk)
 			clk_set_rate(pwr->ebi1_clk, pwrlevel->bus_freq);
-	}
 
 	if (test_bit(KGSL_PWRFLAGS_CLK_ON, &pwr->power_flags) ||
 		(device->state == KGSL_STATE_NAP)) {
@@ -232,7 +234,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	if (level < 0)
 		return count;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
 	if (level > pwr->num_pwrlevels - 2)
 		level = pwr->num_pwrlevels - 2;
@@ -248,7 +250,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	 */
 	if (pwr->thermal_pwrlevel > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	return count;
 }
@@ -287,7 +289,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	if (level < 0)
 		return count;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
 	/* You can't set a maximum power level lower than the minimum */
 	if (level > pwr->min_pwrlevel)
@@ -304,7 +306,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	 */
 	if (max_level > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, max_level);
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	return count;
 }
@@ -342,7 +344,7 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 	if (level < 0)
 		return count;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	if (level > pwr->num_pwrlevels - 2)
 		level = pwr->num_pwrlevels - 2;
 
@@ -361,7 +363,7 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 	if (min_level < pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, min_level);
 
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	return count;
 }
@@ -423,7 +425,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	if (ret != 1)
 		return count;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	level = _get_nearest_pwrlevel(pwr, val);
 	if (level < 0)
 		goto done;
@@ -439,7 +441,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
 
 done:
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 	return count;
 }
 
@@ -475,12 +477,12 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 	if (ret != 1)
 		return count;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	level = _get_nearest_pwrlevel(pwr, val);
 	if (level >= 0)
 		kgsl_pwrctrl_pwrlevel_change(device, level);
 
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 	return count;
 }
 
@@ -517,13 +519,13 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 	if (rc)
 		return rc;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
 	/* Let the timeout be requested in ms, but convert to jiffies. */
 	val /= div;
 	pwr->interval_timeout = val;
 
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	return count;
 }
@@ -559,9 +561,9 @@ static int kgsl_pwrctrl_pmqos_latency_store(struct device *dev,
 	if (rc)
 		return rc;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	device->pwrctrl.pm_qos_latency = val;
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	return count;
 }
@@ -706,9 +708,9 @@ static int __force_on_store(struct device *dev,
 	if (rc)
 		return rc;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	__force_on(device, flag, val);
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	return count;
 }
@@ -784,9 +786,9 @@ static ssize_t kgsl_pwrctrl_bus_split_store(struct device *dev,
 	if (rc)
 		return rc;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	device->pwrctrl.bus_control = val ? true : false;
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	return count;
 }
@@ -1141,8 +1143,7 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 					 pwr->pwrlevels[pwr->active_pwrlevel].
 						bus_freq);
 
-	/* Set the CPU latency to 501usec to allow low latency PC modes */
-	pwr->pm_qos_latency = 501;
+	pwr->pm_qos_latency = pdata->pm_qos_latency;
 
 	pm_runtime_enable(device->parentdev);
 
@@ -1260,7 +1261,7 @@ void kgsl_idle_check(struct work_struct *work)
 	if (device == NULL)
 		return;
 
-	mutex_lock(&device->mutex);
+	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
 	kgsl_pwrscale_update(device);
 
@@ -1284,10 +1285,10 @@ void kgsl_idle_check(struct work_struct *work)
 			if (!device->pwrctrl.irq_last)
 				break;
 			kgsl_pwrctrl_request_state(device, requested_state);
-			mutex_unlock(&device->mutex);
+			kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 			udelay(delay);
 			delay *= 2;
-			mutex_lock(&device->mutex);
+			kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 		}
 
 
@@ -1311,7 +1312,7 @@ void kgsl_idle_check(struct work_struct *work)
 		}
 	}
 
-	mutex_unlock(&device->mutex);
+	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 }
 EXPORT_SYMBOL(kgsl_idle_check);
 
@@ -1427,8 +1428,6 @@ _sleep(struct kgsl_device *device)
 				kgsl_pwrstate_to_str(device->state));
 		break;
 	}
-
-	kgsl_mmu_disable_clk_on_ts(&device->mmu, 0, false);
 
 	return 0;
 }
@@ -1569,7 +1568,10 @@ void kgsl_pwrctrl_enable(struct kgsl_device *device)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	/* Order pwrrail/clk sequence based upon platform */
 	kgsl_pwrctrl_pwrrail(device, KGSL_PWRFLAGS_ON);
-	kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel);
+
+	if ((pwr->constraint.type == KGSL_CONSTRAINT_NONE))
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel);
+
 	kgsl_pwrctrl_clk(device, KGSL_PWRFLAGS_ON, KGSL_STATE_ACTIVE);
 	kgsl_pwrctrl_axi(device, KGSL_PWRFLAGS_ON);
 }
@@ -1644,9 +1646,9 @@ int kgsl_active_count_get(struct kgsl_device *device)
 
 	if ((atomic_read(&device->active_cnt) == 0) &&
 		(device->state != KGSL_STATE_ACTIVE)) {
-		mutex_unlock(&device->mutex);
+		kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 		wait_for_completion(&device->hwaccess_gate);
-		mutex_lock(&device->mutex);
+		kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
 		ret = kgsl_pwrctrl_wake(device, 1);
 	}
@@ -1736,10 +1738,10 @@ int kgsl_active_count_wait(struct kgsl_device *device, int count)
 
 	if (atomic_read(&device->active_cnt) > count) {
 		int ret;
-		mutex_unlock(&device->mutex);
+		kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 		ret = wait_event_timeout(device->active_cnt_wq,
 			_check_active_count(device, count), HZ);
-		mutex_lock(&device->mutex);
+		kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 		result = ret == 0 ? -ETIMEDOUT : 0;
 	}
 

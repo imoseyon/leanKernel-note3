@@ -10,24 +10,18 @@
  * GNU General Public License for more details.
  */
 
-/include/ "msm8974pro-sii8240_mhl-k-r02.dtsi"
-/include/ "msm8974pro-camera-sensor-k-r04.dtsi"
-/include/ "msm8974pro-fingerprint-sensor-k-r03.dtsi"
+/include/ "msm8974pro-sii8240_mhl-kactive-r00.dtsi"
+/include/ "msm8974pro-camera-sensor-kactive-r00.dtsi"
 
 / {
 	aliases {
 		serial0 = &blsp1_uart1;
-		serial1 = &blsp2_uart1;
 		uart3 = &uart1;
 	};
 };
 
 &soc {
 	serial@f991e000 {
-		status = "ok";
-	};
-	
-	serial@f995d000 {
 		status = "ok";
 	};
 
@@ -60,6 +54,7 @@
 			synaptics,tsp-coords = <1079 1919>;
 			synaptics,i2c-pull-up = <1>;
 			synaptics,tsp-project = "K";
+			synaptics,sub-project = "active";
 			synaptics,tsp-extra_config = <0 0 129 0>;/* <"pwrctrl", "pwrctrl(sub)", "octa_id", "N"> */
 		};
 	};
@@ -122,6 +117,8 @@
 		an30259a@30 {
 			compatible = "an30259a,led";
 			reg = <0x30>;
+			an30259a,default_current = <0x50>;	/* default only kactive model:0x50, klte other model:0x28 */
+			an30259a,lowpower_current = <0x0f>;	/* lowpower only kactive model:0x0f, klte other model:0x05 */
 		};
 		expander_gpios: pcal6416a@20 {
 			compatible = "pcal6416a,gpio-expander";
@@ -138,30 +135,6 @@
 			pcal6416a,data_out = <0x0008>;	/* 0000 0000 0000 1001  */
 			/* pull_reg, 31 ~ 0, 2bit configure[00:no_pull, 01:pull_down, 10:pull_up, 11:not used]*/
 			pcal6416a,pull_reg = <0x00040401>; /* 00 00 00 00 / 00 00 01 00 /  00 00 01 00 / 00 00 00 00 */
-		};
-	};
-
-	i2c@21 {
-		cell-index = <21>;
-		compatible = "i2c-gpio";
-		gpios = <&msmgpio 95 0 /* sda */
-			 &msmgpio 96 0 /* scl */
-			>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		cypress_touchkey@20 {
-			compatible = "cypress,cypress-tkey";
-			reg = <0x20>;
-			interrupt-parent = <&pma8084_gpios>;
-			interrupts = <6 0>;
-			vdd_led-supply = <&pma8084_l19>;
-			vcc_en-supply = <&pma8084_lvs3>;
-			cypress,scl-gpio = <&msmgpio 96 0x00>;
-			cypress,sda-gpio = <&msmgpio 95 0x00>;
-			cypress,irq-gpio = <&pma8084_gpios 6 0x1>;
-			cypress,tkey-keycodes = <254 158>;
-			cypress,i2c-pull-up = <1>;
 		};
 	};
 
@@ -189,44 +162,60 @@
 			irda_ice40,i2c-pull-up = <1>;
 		};
 	};
-	
+
 	gpio_keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
 
 		vol_down {
 			label = "volume_down";
-			gpios = <&pma8084_gpios 2 0x1>;
+			gpios = <&pma8084_gpios 5 0x1>;
 			linux,input-type = <1>;
-			linux,code = <114>;
+    		linux,code = <114>;
 			debounce-interval = <15>;
 		};
 
 		vol_up {
 			label = "volume_up";
-			gpios = <&pma8084_gpios 5 0x1>;
+			gpios = <&pma8084_gpios 2 0x1>;
 			linux,input-type = <1>;
-			linux,code = <115>;
+            linux,code = <115>;
 			debounce-interval = <15>;
 		};
-		
-		
+
 		hot_key {
 			label = "hot_key";
-			gpios = <&msmgpio 144 0x00>;
+			gpios = <&msmgpio 144 0x01>;
+			linux,input-type = <1>;
+			linux,code = <252>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+
+		home_key {
+			label = "home_key";
+			gpios = <&pma8084_gpios 3 0x1>;
 			linux,input-type = <1>;
 			linux,code = <172>;
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
 
-	};
+		back_key {
+			label = "back_key";
+			gpios = <&msmgpio 96 0x01>;
+			linux,input-type = <1>;
+			linux,code = <158>;
+			debounce-interval = <15>;
+		};
 
-	onewire {
-		compatible = "w1-gpio-msm";
-		gpios = <&msmgpio 69 0x00>;
-		linux,open-drain = <1>;
-		linux,slave-speed = <1>;
+		menu_key {
+			label = "menu_key";
+			gpios = <&msmgpio 95 0x01>;
+			linux,input-type = <1>;
+			linux,code = <254>;
+			debounce-interval = <15>;
+		};
 	};
 
 	spi@f9923000 {
@@ -275,8 +264,7 @@
 			ssp,ap_int-gpio = <&msmgpio 89 0x00>;
 			ssp,rst-gpio = <&msmgpio 9 0x00>;
 			ssp,acc-position = <6>;
-			ssp,mag-position = <7>;
-			ssp,sns-combination = <0>;
+			ssp,mag-position = <3>;
 			ssp,ap-rev=<5>;
 			qcom,temphumidity_sensor-vadc = <&pma8084_vadc>;
 		};
@@ -306,10 +294,6 @@
 			pn547,ven-gpio = <&pma8084_gpios 9 0x00>;
 			pn547,firm-expander-gpio = <311>;
 		};
-		ncp6335b@1c {
-			compatible = "ncp6335b,camera-dcdc";
-			reg = <0x1c>;
-		};
 	};
 
 	qcom,wqhd_cmd0 {
@@ -327,7 +311,8 @@
 	mdss_dsi0: qcom,mdss_dsi@fd922800 {
 		iovdd-supply = <&pma8084_lvs4>;
 		qcom,dsi-pref-prim-pan-dual = <&dsi_dual_samsung_cmd_0>;
-		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;		
+		qcom,dsi-pref-prim-pan = <&dsi_samsung_fhd>;
+		qcom,dsi-pref-prim-pan-magna = <&dsi_samsung_fhd_k_mag>;	
 	};
 	
 	mdss_dsi1: qcom,mdss_dsi@fd922e00 {
@@ -338,8 +323,8 @@
 		qcom,mdss-pref-prim-intf = "dsi";
 		
 		mdss_fb0: qcom,mdss_fb_primary {
-			qcom,memory-reservation-size = <0x1F40000>;	/* 0 MB allocaed for fb0 */
 			qcom,memory-alt-reservation-size = <0x1000000>;	 /* Framebuffer reservation only for LPM or recovery boot mode */
+			qcom,memblock-reserve = <0x03200000 0x00F00000>;
 			qcom,mdss-fb-split = <720 720>;
 		};
 		
@@ -417,12 +402,12 @@
 		qcom,earjack-fsa_en-expander-gpio = <310>;
 		qcom,send-end-active-high;
 		det-zones-list = <&det_zones 3 10000 10 0>,
-						 <&det_zones 930 10000 10 0>,
+						 <&det_zones 950 10000 10 0>,
 						 <&det_zones 2400 10000 10 1>,
 						 <&det_zones 9999 10000 10 1>;
-		but-zones-list = <&but_zones 0 0 145>,
-						 <&but_zones 1 146 310>,
-						 <&but_zones 2 311 640>;
+		but-zones-list = <&but_zones 0 0 155>,
+						 <&but_zones 1 156 313>,
+						 <&but_zones 2 314 643>;
 		mpp-channel-scaling = <4 1 3>;
 	};
 
@@ -444,7 +429,7 @@
 
 		battery,adc_check_count = <5>;
 
-		battery,cable_check_type = <4>; /* SEC_BATTERY_CABLE_CHECK_PSY */
+		battery,cable_check_type = <6>; /* SEC_BATTERY_CABLE_CHECK_PSY | SEC_BATTERY_CABLE_CHECK_NOINCOMPATIBLECHARGE */
 		battery,cable_source_type = <1>; /* SEC_BATTERY_CABLE_SOURCE_EXTERNAL */
 		battery,event_check;
 		battery,event_waiting_time = <600>;
@@ -483,14 +468,14 @@
 		/* SEC_BATTERY_FULL_CONDITION_SOC |
 		   SEC_BATTERY_FULL_CONDITION_NOTIMEFULL |
 		   SEC_BATTERY_FULL_CONDITION_VCELL */
-		battery,full_condition_type = <9>;
+		battery,full_condition_type = <13>;
 		battery,full_condition_soc = <97>;
-		battery,full_condition_vcell = <4300>;
+		battery,full_condition_vcell = <4350>;
 
 		battery,recharge_check_count = <1>;
 		battery,recharge_condition_type = <4>; /* SEC_BATTERY_RECHARGE_CONDITION_VCELL */
 		battery,recharge_condition_soc = <98>;
-		battery,recharge_condition_vcell = <4300>;
+		battery,recharge_condition_vcell = <4350>;
 
 		battery,charging_total_time = <21600>;
 		battery,recharging_total_time = <5400>;
@@ -504,14 +489,14 @@
 			battery,chg_polarity_en = <0>;
 			battery,chg_gpio_status = <0>;
 			battery,chg_polarity_status = <0>;
-			battery,chg_float_voltage = <4350>;
+			battery,chg_float_voltage = <4400>;
 			battery,ovp_uvlo_check_type = <3>; /* SEC_BATTERY_OVP_UVLO_CHGPOLLING */
 			battery,full_check_type = <7>; /* SEC_BATTERY_FULLCHARGED_CHGPSY */
 
-			battery,input_current_limit = <1800 460 460 1800 460 900 1000 460 460 1000 650 1800 1800 460 1300 400 700 1300 300 1000 1800 460 460>;
-			battery,fast_charging_current = <2100 0 460 2100 460 1200 1000 460 0 1200 750 2100 2100 0 1300 400 700 1300 300 1000 2100 0 0>;
+			battery,input_current_limit = <1800 460 460 1800 460 900 1000 460 460 1000 760 1800 1800 460 1300 400 700 1300 300 1000 1800 460 460>;
+			battery,fast_charging_current = <2100 0 460 2100 460 1200 1000 460 0 1200 900 2100 2100 0 1300 400 700 1300 300 1000 2100 0 0>;
 			battery,full_check_current_1st = <200 0 200 200 200 200 200 200 0 200 200 200 200 0 200 200 200 200 200 200 200 0 0>;
-			battery,full_check_current_2nd = <2400 0 2400 1800 2400 2400 2400 2400 0 2400 2400 2400 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
+			battery,full_check_current_2nd = <2400 0 2400 2400 2400 2400 2400 2400 0 2400 2400 2400 2400 0 2400 2400 2400 2400 2400 2400 2400 0 0>;
 		};
 	};
 };
@@ -925,6 +910,8 @@
 
 		es705-gpioa-gpio = <&msmgpio 76 0>;
 		es705-gpiob-gpio = <&msmgpio 79 0>;
+		es705-uart-tx = <&msmgpio 0 0>;
+		es705-uart-rx = <&msmgpio 1 0>;
 		es705-reset-expander-gpio = <300>;
 
 		es705-slim-ifd = "es705-ifd";
@@ -939,6 +926,7 @@
 
 			qcom,pon_1 {
 				qcom,pon-type = <0>;
+				qcom,disable-reset = <1>;
 				qcom,pull-up = <1>;
 				linux,code = <116>;
 			};
@@ -946,6 +934,7 @@
 			qcom,pon_2 {
 				qcom,pon-type = <1>;
 				qcom,support-reset = <0>;
+				qcom,disable-reset = <1>;
 				qcom,pull-up = <1>;
 				qcom,s1-timer = <0>;
 				qcom,s2-timer = <2000>;

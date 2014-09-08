@@ -28,6 +28,16 @@
 };
 
 &soc {
+	qcom,wdt@f9017000 {
+		compatible = "qcom,msm-watchdog";
+		qcom,memblock-reserve = <0x0 0x4000>;
+		reg = <0xf9017000 0x1000>;
+		interrupts = <0 3 0>, <0 4 0>;
+		qcom,bark-time = <15000>;
+		qcom,pet-time = <10000>;
+		qcom,ipi-ping;
+	};
+
 	i2c@f9923000 { /* BLSP#1 */
 		status = "ok";
 		pn547@29 {
@@ -39,6 +49,24 @@
 			pn547,ven-gpio = <&pma8084_gpios 9 0x00>;
 			pn547,firm-gpio = <&msmgpio 63 0x00>;
 		};
+	};
+
+	earjack {
+		compatible = "sec_jack";
+		qcom,earjack-read-vadc = <&pma8084_vadc>;
+		qcom,earjack-detect-gpio = <&pma8084_gpios 20 0>;
+		qcom,earjack-micbias-gpio = <&msmgpio 85 0>;
+		qcom,earjack-sendend-gpio = <&msmgpio 77 0>;
+		qcom,earjack-fsa_en-expander-gpio = <310>;
+		qcom,send-end-active-high;
+		det-zones-list = <&det_zones 3 10000 10 0>,
+				 <&det_zones 950 10000 10 0>,
+				 <&det_zones 2400 10000 10 1>,
+				 <&det_zones 9999 10000 10 1>;
+		but-zones-list = <&but_zones 0 0 155>,
+				 <&but_zones 1 156 313>,
+				 <&but_zones 2 314 643>;
+		mpp-channel-scaling = <4 1 3>;
 	};
 };
 

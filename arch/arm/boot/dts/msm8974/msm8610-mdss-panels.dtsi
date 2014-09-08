@@ -16,4 +16,3 @@
 /include/ "dsi-panel-otm8018b-fwvga-video.dtsi"
 /include/ "dsi-panel-hx8379a-wvga-video.dtsi"
 /include/ "dsi-panel-hx8389b-qhd-video.dtsi"
-/include/ "dsi-panel-ili9806b-wvga-cmd.dtsi"

@@ -399,8 +399,9 @@ static struct mdss_mdp_wb_data *get_local_node(struct mdss_mdp_wb *wb,
 static struct mdss_mdp_wb_data *get_user_node(struct msm_fb_data_type *mfd,
 						struct msmfb_data *data)
 {
-
+#if defined(CONFIG_FB_MSM_CMD_MODE)
 	struct mdss_mdp_ctl *ctl = mfd_to_ctl(mfd); 
+#endif
 	struct mdss_mdp_wb *wb = mfd_to_wb(mfd);
 	struct mdss_mdp_wb_data *node;
 	struct mdss_mdp_img_data *buf;
@@ -418,8 +419,10 @@ static struct mdss_mdp_wb_data *get_user_node(struct msm_fb_data_type *mfd,
 	if (wb->is_secure)
 		buf->flags |= MDP_SECURE_OVERLAY_SESSION;
 
+#if defined(CONFIG_FB_MSM_CMD_MODE)
 	if (!is_mdss_iommu_attached()) 
 		mdss_iommu_attach(ctl->mdata); 
+#endif
 
 	ret = mdss_mdp_get_img(data, buf);
 	if (IS_ERR_VALUE(ret)) {
