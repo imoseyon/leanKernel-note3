@@ -546,8 +546,10 @@ void msm_mpm_exit_sleep(bool from_idle)
 		return;
 	}
 
+#ifdef CONFIG_SEC_KANAS_PROJECT
 	enabled_intr = from_idle ? msm_mpm_enabled_irq :
 						msm_mpm_wake_irq;
+#endif
 
 	for (i = 0; i < MSM_MPM_REG_WIDTH; i++) {
 		pending = msm_mpm_read(MSM_MPM_REG_STATUS, i);
@@ -556,8 +558,8 @@ void msm_mpm_exit_sleep(bool from_idle)
 		pending &= enabled_intr;
 #endif
 		if (MSM_MPM_DEBUG_PENDING_IRQ & msm_mpm_debug_mask)
-			pr_info("%s: enabled_intr pending.%d: 0x%08x 0x%08lx\n",
-				__func__, i, enabled_intr[i], pending);
+                        pr_info("%s: pending.%d: 0x%08lx", __func__,
+                                        i, pending);
 
 		k = find_first_bit(&pending, 32);
 		while (k < 32) {

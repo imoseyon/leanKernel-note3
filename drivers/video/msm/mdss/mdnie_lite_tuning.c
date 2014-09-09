@@ -344,6 +344,7 @@ void update_mdnie_gamma_curve(void)
 	for (i = 42; i < 107; i++)
 	CONTROL_2[i] = source[i];
 }
+#endif
 
 #if defined(CONFIG_FB_MSM_MIPI_VIDEO_WVGA_NT35502_PT_PANEL)
 #define MAX_TUNE_SIZE	5
@@ -1624,6 +1625,7 @@ void init_mdnie_class(void)
 	device_create_file(tune_mdnie_dev, &dev_attr_white);
 	device_create_file(tune_mdnie_dev, &dev_attr_black);
 	device_create_file(tune_mdnie_dev, &dev_attr_version);
+#endif
 
 #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
 	if (device_create_file

@@ -584,7 +584,7 @@ static bool __ref msm_pm_spm_power_collapse(
 	collapsed = save_cpu_regs ?
 		!cpu_suspend(0, msm_pm_collapse) : msm_pm_pc_hotplug();
 
-#ifdef CONFIG_SEC_PM_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 	if(from_idle == false && cpu == 0 && sec_debug_is_enabled()){
 		sec_print_masters_stats();
 	}

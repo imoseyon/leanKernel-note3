@@ -31,7 +31,6 @@
 	static int check_pkey_press;
 #endif
 
-#ifdef CONFIG_ARCH_MSM8226  //should be removed
 extern struct class *sec_class;
 
 /* Common PNP defines */
