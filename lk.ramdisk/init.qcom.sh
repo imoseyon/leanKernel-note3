@@ -38,21 +38,18 @@ fi
 start_sensors()
 {
     if [ -c /dev/msm_dsps -o -c /dev/sensors ]; then
-        mkdir -p /data/system/sensors
-        touch /data/system/sensors/settings
-        chmod -h 775 /data/system/sensors
-        chmod -h 664 /data/system/sensors/settings
-        chown -h system /data/system/sensors/settings
-
         mkdir -p /data/misc/sensors
         chmod -h 775 /data/misc/sensors
+        echo 1 > /data/misc/sensors/sensors_settings
 
-        if [ ! -s /data/system/sensors/settings ]; then
-            # If the settings file is empty, enable sensors HAL
-            # Otherwise leave the file with it's current contents
-            echo 1 > /data/system/sensors/settings
-        fi
+        chmod -h 664 /data/misc/sensors/sensors_settings
+        chown -h system.root /data/misc/sensors/sensors_settings
+
+	mkdir -p /efs/sensors
+        chmod -h 775 /efs/sensors
+
         start sensors
+	start factory_adsp
     fi
 }
 
@@ -77,12 +74,14 @@ start_charger_monitor()
 {
 	if ls /sys/module/qpnp_charger/parameters/charger_monitor; then
 		chown -h root.system /sys/module/qpnp_charger/parameters/*
-		chown -h root.system /sys/class/power_supply/battery/input_current_max
-		chown -h root.system /sys/class/power_supply/battery/input_current_trim
-		chown -h root.system /sys/class/power_supply/battery/voltage_min
-		chmod -h 0664 /sys/class/power_supply/battery/input_current_max
-		chmod -h 0664 /sys/class/power_supply/battery/input_current_trim
-		chmod -h 0664 /sys/class/power_supply/battery/voltage_min
+		chown -h root.system /sys/class/power_supply/qpnp-chg/input_current_max
+		chown -h root.system /sys/class/power_supply/qpnp-chg/input_current_trim
+		chown -h root.system /sys/class/power_supply/qpnp-chg/input_current_settled
+		chown -h root.system /sys/class/power_supply/qpnp-chg/voltage_min
+		chmod -h 0664 /sys/class/power_supply/qpnp-chg/input_current_max
+		chmod -h 0664 /sys/class/power_supply/qpnp-chg/input_current_trim
+		chmod -h 0664 /sys/class/power_supply/qpnp-chg/input_current_settled
+		chmod -h 0664 /sys/class/power_supply/qpnp-chg/voltage_min
 		chmod -h 0664 /sys/module/qpnp_charger/parameters/charger_monitor
 		start charger_monitor
 	fi
@@ -162,7 +161,7 @@ if [ "$izat_service_pip" -ne 0 ]; then
     start quipc_igsn
 fi
 
-#start_sensors
+start_sensors
 
 case "$target" in
     "msm7630_surf" | "msm7630_1x" | "msm7630_fusion")

@@ -55,9 +55,9 @@ on fs
     check_fs /dev/block/platform/msm_sdcc.1/by-name/cache ext4
     mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
 
-    wait /dev/block/platform/msm_sdcc.1/by-name/persist
-    check_fs /dev/block/platform/msm_sdcc.1/by-name/persist ext4
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/persist /persist nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
+#    wait /dev/block/platform/msm_sdcc.1/by-name/persist
+#    check_fs /dev/block/platform/msm_sdcc.1/by-name/persist ext4
+#    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/persist /persist nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
 
     wait /dev/block/platform/msm_sdcc.1/by-name/efs
     check_fs /dev/block/platform/msm_sdcc.1/by-name/efs ext4
@@ -72,7 +72,6 @@ on fs_selinux
 
     wait /dev/block/platform/msm_sdcc.1/by-name/modem
     mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware-modem ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337,context=u:object_r:firmware:s0
-    write /sys/kernel/boot_adsp/boot 1
 
 on fs_selinux_disable
     wait /dev/block/platform/msm_sdcc.1/by-name/apnhlos
@@ -80,7 +79,6 @@ on fs_selinux_disable
 
     wait /dev/block/platform/msm_sdcc.1/by-name/modem
     mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware-modem ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
-    write /sys/kernel/boot_adsp/boot 1
 
 on post-fs-data
     mkdir /data/tombstones 0771 system system
@@ -88,6 +86,16 @@ on post-fs-data
     mkdir /tombstones/lpass 0771 system system
     mkdir /tombstones/wcnss 0771 system system
     mkdir /tombstones/dsps 0771 system system
+
+on post-fs
+# Mobicore
+    export MC_AUTH_TOKEN_PATH /efs
+
+# set device node permissions for TLC apps
+	chmod 700 /dev/mobicore
+	chmod 666 /dev/mobicore-user
+	chown system system /dev/mobicore
+	chown radio system /dev/mobicore-user
 
 # sensors
     chown system radio /sys/class/sensors/accelerometer_sensor/raw_data
@@ -269,7 +277,7 @@ service usf-post-boot /system/bin/sh /system/etc/usf_post_boot.sh
     disabled
     oneshot
 
-service prepare-mobicore /system/bin/sh /system/bin/mobicore-presetup.sh
+service prepare-mobicore /system/bin/mcStarter tbase300
     class core
 	user root
 	group root
@@ -282,7 +290,7 @@ service run-mobicore /system/bin/sh /system/bin/mobicore-startup.sh
 
 on property:init.svc.bootanim=stopped
     start usf-post-boot
-	start run-mobicore
+    start run-mobicore
 
 service imsqmidaemon /system/bin/imsqmidaemon
     class main
@@ -315,14 +323,14 @@ service ims_rtp_daemon /system/bin/ims_rtp_daemon
 on property:sys.ims.DATA_DAEMON_STATUS=1
     start ims_rtp_daemon
 
-service ppd /system/bin/mm-pp-daemon
-    class late_start
-    user system
-    socket pps stream 0660 system system graphics
-    group system graphics
-
-on property:init.svc.surfaceflinger=stopped
-    stop ppd
+# service ppd /system/bin/mm-pp-daemon
+#     class late_start
+#     user system
+#     socket pps stream 0660 system system
+#     group system graphics
+# 
+# on property:init.svc.surfaceflinger=stopped
+#     stop ppd
 
 # Secure Storage startup
 service secure_storage /system/bin/secure_storage_daemon

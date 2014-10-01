@@ -71,8 +71,6 @@ on init
     symlink /storage/UsbDriveE /mnt/UsbDriveE
     symlink /storage/UsbDriveF /mnt/UsbDriveF
 
-    export SECONDARY_STORAGE /storage/extSdCard
-    
     mkdir /storage/extSdCard 0700 root root
     mkdir /storage/UsbDriveA 0700 root root
     mkdir /storage/UsbDriveB 0700 root root
@@ -86,6 +84,7 @@ on early-boot
     setrlimit 8 67108864 67108864
 	# Allow subsystem (modem etc) debugging
     write /sys/module/subsystem_restart/parameters/enable_debug ${persist.sys.ssr.enable_debug}
+    write /sys/kernel/boot_adsp/boot 1
     # exec /system/bin/sh /init.qcom.early_boot.sh ${ro.board.platform}
     # exec /system/bin/sh /init.qcom.syspart_fixup.sh ${ro.board.platform} ${ro.serialno}
 
@@ -122,7 +121,8 @@ on boot
     chmod 0775 /efs/bluetooth
 
     #Audience ES705 UART
-    chmod 0666 /dev/ttyHS3
+    chmod 0660 /dev/ttyHS3
+    chown system system /dev/ttyHS3
 
     #Create QMUX deamon socket area
     mkdir /dev/socket/qmux_radio 0770 radio radio
@@ -150,24 +150,6 @@ on boot
 
     #For bridgemgr daemon to inform the USB driver of the correct transport
     chown radio radio /sys/class/android_usb/f_rmnet_smd_sdio/transport
-
-#   Define TCP buffer sizes for various networks
-#   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
-    setprop net.tcp.buffersize.default 4096,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.lte     524288,1048576,2097152,262144,524288,1048576
-    setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.hspa    4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hsupa   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hsdpa   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hspap   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
-    setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
-    setprop net.tcp.buffersize.evdo    4094,87380,262144,4096,16384,262144
-
-#   Assign TCP buffer thresholds to be ceiling value of technology maximums
-#   Increased technology maximums should be reflected here.
-    write /proc/sys/net/core/rmem_max  2097152
-    write /proc/sys/net/core/wmem_max  2097152
 
     #To allow interfaces to get v6 address when tethering is enabled
     write /proc/sys/net/ipv6/conf/rmnet0/accept_ra 2
@@ -239,7 +221,7 @@ on post-fs-data
     # for WIFI Version
 	write /data/.wifiver.info 0
     chown system root /data/.wifiver.info
-    chmod 0666 /data/.wifiver.info
+    chmod 0664 /data/.wifiver.info
 
     # for WIFI Cert
     chmod 0664 /data/.bustxglom.info
@@ -249,8 +231,9 @@ on post-fs-data
 
     # for WIFI MAC address
     mkdir /efs/wifi 0775 radio system
-    chown system system /efs/wifi/.mac.info
-    chmod 0664 /efs/wifi/.mac.info
+    chown system wifi /efs/wifi/.mac.info
+    chmod 0660 /efs/wifi/.mac.info
+    chmod 0660 /efs/wifi/.mac.cob
 
     # Create directory used by audio subsystem
     mkdir /data/misc/audio 0770 audio audio
@@ -300,8 +283,6 @@ on post-fs-data
     mkdir /data/time/ 0700 system system
 
     mkdir /data/audio/ 0770 media audio
-    # Enable the setgid bit on the directory
-    chmod 2770 /data/audio
 
     setprop vold.post_fs_data_done 1
 
@@ -320,10 +301,6 @@ service usbhub_init /system/bin/usbhub_init
 
 on property:persist.radio.atfwd.start=false
     stop atfwd
-
-on property:init.svc.surfaceflinger=stopped
-    stop ppd
-    stop hdmid
 
 on property:ro.board.platform=msm7630_fusion
     start usbhub_init
@@ -418,7 +395,7 @@ service config_bluetooth /system/bin/sh /system/etc/init.qcom.bt.sh "onboot"
 service hciattach /system/bin/sh /system/etc/init.qcom.bt.sh
     class late_start
     user bluetooth
-    group bluetooth net_bt_admin
+    group bluetooth net_bt_admin net_bt_stack
     disabled
     oneshot
 
@@ -491,6 +468,11 @@ service sensors /system/bin/sensors.qcom
     group root
     disabled
 
+service factory_adsp /system/bin/factory.adsp
+    class late_start
+    user system
+    group system radio inet qcom_diag
+    disabled
 on property:ro.use_data_netmgrd=false
     # netmgr not supported on specific target
     stop netmgrd
@@ -630,13 +612,15 @@ on property:init.svc.macloader=stopped
     chmod 0664 /data/.rev
 # end of wifi
 
+service sec-sh /system/bin/sh /system/etc/init.sec.boot.sh
+    class main
+    user root
+    oneshot
+
 service olsrd /system/bin/olsrd -f /etc/wifi/olsrd.conf
     class main
     disabled
     oneshot
-
-on property:init.svc.dhcpcd_ibss=running
-    start olsrd
 
 service gpsone_daemon /system/bin/gpsone_daemon
     class late_start
@@ -738,17 +722,6 @@ service atfwd /system/bin/ATFWD-daemon
     class late_start
     user system
     group system radio
-
-#service hdmid /system/bin/hdmid
-#    class late_start
-#    socket hdmid stream 0660 root system graphics
-#    disabled
-
-#service ppd /system/bin/mm-pp-daemon
-#    class late_start
-#    user system
-#    socket pps stream 0660 system system graphics
-#    group system graphics
 
 #service hostapd /system/bin/hostapd -dddd /data/hostapd/hostapd.conf
 #    class late_start
@@ -863,11 +836,6 @@ service hcidump /system/bin/sh /system/etc/hcidump.sh
 service charger /charger
     class charger
 
-service ssr_diag /system/bin/ssr_diag
-    class late_start
-    user system
-    group system
-
 # SSR setting
 on property:persist.sys.ssr.restart_level=*
     exec /system/bin/sh /init.qcom.ssr.sh ${persist.sys.ssr.restart_level}
@@ -897,9 +865,14 @@ on property:persist.usb.hvdcp.detect=true
 on property:persist.usb.hvdcp.detect=false
     stop hvdcp
 
-service charger_monitor /system/bin/charger_monitor
+# charger_monitor for poweron charging
+service charger_monitor /system/bin/charger_monitor qpnp_charger 300000 48
     user system
     group system
+    disabled
+
+# charger_monitor for poweroff charging
+service charger_monitor2 /system/bin/charger_monitor qpnp_charger 300000 48
     disabled
 
 service diag_mdlog_start /system/bin/diag_mdlog
@@ -915,3 +888,19 @@ service diag_mdlog_stop /system/bin/diag_mdlog -k
     group system qcom_diag sdcard_rw sdcard_r media_rw
     disabled
     oneshot
+
+service qlogd /system/xbin/qlogd
+    class main
+    disabled
+on property:persist.sys.qlogd=1
+    start qlogd
+on property:persist.sys.qlogd=0
+    stop qlogd
+
+service rootagent /system/bin/sh /system/etc/init.qcom.rootagent.sh
+    disabled
+    oneshot
+on property:persist.sys.rootagent=1
+    start rootagent
+on property:persist.sys.rootagent=0
+    stop rootagent

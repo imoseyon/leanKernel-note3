@@ -31,3 +31,7 @@ on boot
 # Allow only the shell group to read and truncate the kernel trace.
     chown root shell /sys/kernel/debug/tracing/trace
     chmod 0660 /sys/kernel/debug/tracing/trace
+
+# Allow shell group to enable tgid prints
+    chown root shell /sys/kernel/debug/tracing/options/print-tgid
+    chmod 0664 /sys/kernel/debug/tracing/options/print-tgid

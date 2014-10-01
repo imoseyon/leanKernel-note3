@@ -61,6 +61,10 @@ on property:ro.baseband=dsda2
     start qmuxd
     setprop persist.radio.multisim.config dsda
 
+on property:ro.baseband=dsda3
+    start qmuxd
+    setprop persist.radio.multisim.config dsda
+
 on property:ro.baseband=unknown
     start qmuxd
 
@@ -77,6 +81,11 @@ on property:ro.use_data_netmgrd=true
 #
 # start multiple rilds based on multisim property
 #
+on property:ro.multisim.simslotcount=2
+    stop ril-daemon
+    start ril-daemon
+    start ril-daemon1
+
 on property:persist.radio.multisim.config=dsds
     stop ril-daemon
     start ril-daemon

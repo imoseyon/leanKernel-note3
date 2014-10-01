@@ -176,3 +176,6 @@
 /dev/uio0                 0660   system     system
 /dev/uio1                 0660   system     system
 /dev/uio2                 0660   system     system
+
+#latin Mobile TV
+/dev/isdbt                0660   system     system

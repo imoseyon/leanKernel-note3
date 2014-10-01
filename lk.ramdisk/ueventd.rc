@@ -101,6 +101,12 @@
 # for PL2303 driver
 /dev/ttyUSB*           0660   system     usb
 
+# for BIO Sensor
+/dev/ttyHSL1           0666   system     system
+/dev/ttyHSL2           0666   system     radio
+/sys/class/sensors/bodytemp_sensor/bglu_indication 0660 system radio
+
+
 # EFS
 /dev/block/mmcblk0p11	  0660	 system		system
 
@@ -111,6 +117,9 @@
 /sys/devices/virtual/input/input*   flush  0660  root   input
 /sys/devices/virtual/usb_composite/*   enable      0664  root   system
 /sys/devices/f9924000.i2c/i2c-2/2-0020/input/input*   enabled     0660  system  system
+/sys/devices/f9924000.i2c/i2c-2/2-0049/input/input*   enabled     0660  system  system
+/sys/devices/f9924000.i2c/i2c-2/2-0018/input/input*   enable     0660  system  input
+/sys/devices/f9924000.i2c/i2c-2/2-0018/input/input*   delay     0660  system  input
 
 # sensorhub
 /dev/ssp_sensorhub        0660   system     system
@@ -121,36 +130,16 @@
 /sys/devices/f9967000.spi/spi_master/spi32765/spi32765.0/iio:device*   buffer/length 0660	  system	system
 /sys/devices/f9967000.spi/spi_master/spi11/spi11.0/iio:device*   buffer/enable 0660	  system	system
 /sys/devices/f9967000.spi/spi_master/spi11/spi11.0/iio:device*   buffer/length 0660	  system	system
-/sys/devices/f9924000.i2c/i2c-2/2-0020/input/input*   enabled     0660  system  system
+/sys/devices/f9924000.spi/spi_master/spi32766/spi32766.0/iio:device*   buffer/enable 0660     system    radio
+/sys/devices/f9924000.spi/spi_master/spi32766/spi32766.0/iio:device*   buffer/length 0660     system    radio
+/sys/devices/f9924000.spi/spi_master/spi32765/spi32765.0/iio:device*   buffer/enable 0660     system    radio
+/sys/devices/f9924000.spi/spi_master/spi32765/spi32765.0/iio:device*   buffer/length 0660     system    radio
 
-
-# Felica
-/dev/felica               0660    mfc   system
-/dev/felica_pon           0660    mfc   system
-/dev/felica_cen           0660    mfc   felicalock
-/dev/felica_rfs           0440    mfc   system
-/dev/felica_rws           0660    mfc   system
-/dev/felica_ant           0660    mfc   system
-/dev/felica_int_poll      0400    mfc   system
-/dev/felica_uid           0220    mfc   system
-/dev/felica_uicc          0660    mfc   system
-
-# NFC
-# JPN Felica Temporary Workaround
-/dev/ttyHSL1              0660    nfc       nfc
-/dev/snfc_uart            0660    nfc       nfc
-/dev/snfc_pon             0220    nfc       nfc
-/dev/snfc_cen             0440    nfc       system
-/dev/snfc_hsel            0660    nfc       nfc
-/dev/snfc_intu_poll       0440    nfc       nfc
-/dev/snfc_available_poll  0440    nfc       nfc
-/dev/snfc_rfs             0440    nfc       nfc
-/dev/snfc_rfs_poll        0440    nfc       nfc
-/dev/uartcc               0660    nfc       nfc
-
-# ISDB-Tmm  FSI 20140416
-/dev/mmtuneri2c		  0660	  system    system
-/dev/mmtunerspi		  0660	  system    system
+#Accelerometer sensor
+/sys/devices/f9925000.i2c/i2c-0/0-0018/input/input*   enable     0664  system  system
+/sys/devices/f9925000.i2c/i2c-0/0-0018/input/input*   delay     0664  system  system
+/sys/devices/i2c.73/i2c-16/16-0018/input/input* enable    0664  system  system
+/sys/devices/i2c.73/i2c-16/16-0018/input/input* delay     0664  system  system
 
 # sysfs iio event
 /sys/devices/f9927000.i2c/i2c-5/5-0024/iio:device*										0664   system     radio
@@ -165,11 +154,6 @@
 /sys/devices/f9927000.i2c/i2c-5/5-0039/iio:device* prox_delay							0660   system     radio
 /sys/devices/f9927000.i2c/i2c-5/5-0039/iio:device* in_illuminance0_input				0660   system     radio
 /sys/devices/f9927000.i2c/i2c-5/5-0039/iio:device* in_proximity0_input					0660   system     radio
-
-/sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* buffer								0777   system     radio
-/sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* scan_elements						0777   system     radio
-/sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* trigger							0777   system     radio
-/sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* power								0777   system     radio
 
 /sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* uevent								0660   system     radio
 /sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* dev								0660   system     radio

@@ -83,13 +83,6 @@ service scranton_RD /system/bin/scranton_RD
 on property:sys.qseecomd.enable=true
     start scranton_RD
 
-# IPSec for VOLTE
-service ipsec-daemon /system/bin/IPSecService
-    class main
-    socket ipsec_socket stream 660 root system    
-    user root
-    group system
-
 #InsideSecure VPN Client
 service vpnclientpm /system/bin/vpnclientpm -u 1000 -g 1000 \
      -O /data/data/com.ipsec.service/vpnclientpm.txt \
@@ -108,3 +101,20 @@ service bootchecker /system/bin/bootchecker
     group system log
     oneshot
 
+#
+# VOWIFI - This RILD service defined here will override the one
+# defined in the main init.rc to support Sprint VoWiFI project.
+#
+service ril-daemon /system/bin/rild
+    class main
+    socket rild stream 660 root radio
+    socket rild-debug stream 660 radio system
+    socket rild-cas stream 660 casdrm mmb
+#
+# VoWiFi: Added cfiat and kipc socket for Sprint VoWiFi project.
+    socket cfiat stream 660 radio inet
+    socket kipc stream 660 radio inet
+# End of VoWiFi
+#
+    user root
+    group radio cache inet misc audio log qcom_diag system drmrpc
