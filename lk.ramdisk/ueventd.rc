@@ -6,7 +6,7 @@
 /dev/random               0666   root       root
 /dev/urandom              0666   root       root
 # Make HW RNG readable by group system to let EntropyMixer read it.
-/dev/hw_random            0440   root       system
+/dev/hw_random            0660   root       system
 /dev/frandom              0666   root       root
 /dev/erandom              0666   root       root
 /dev/ashmem               0666   root       root
