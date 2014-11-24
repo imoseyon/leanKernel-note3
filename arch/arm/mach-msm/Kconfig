@@ -4931,4 +4931,10 @@ config MUIC_RESET_PIN_ENABLE
         help 
                 This request is from H/W team
 		In case of mUIC voltage drop, mUIC will be reset
+
+config HAS_MACH_MEMUTILS
+        default n
+        bool "Motorola MSM memcpy enhancements"
+        help
+        Faster memcpy performance for Krait
 endif
