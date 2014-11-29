@@ -8,7 +8,6 @@
 #<src>                                                <mnt_point>  <type>  <mnt_flags and options>                     <fs_mgr_flags>
 /dev/block/platform/msm_sdcc.1/by-name/boot           /boot            emmc    defaults   defaults
 /dev/block/platform/msm_sdcc.1/by-name/recovery       /recovery        emmc    defaults   defaults
-/dev/block/platform/msm_sdcc.1/by-name/system         /system          ext4    ro,errors=panic                                wait
 
 # VOLD
 /devices/msm_sdcc.3/mmc_host/mmc2*                     auto             auto    defaults	voldmanaged=sdcard1:auto
