@@ -40,44 +40,23 @@ on fs
     write /sys/devices/msm_sdcc.3/mmc_host/mmc2/power/control on
 
     mount_all fstab.qcom
-    wait /dev/block/platform/msm_sdcc.1/by-name/system
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/system /system ro errors=panic
-    mount f2fs /dev/block/platform/msm_sdcc.1/by-name/system /system ro inline_xattr
+
     wait /dev/block/platform/msm_sdcc.1/by-name/userdata
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/userdata /data nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/userdata /data nosuid nodev noatime noauto_da_alloc,discard,journal_as
     mount f2fs /dev/block/platform/msm_sdcc.1/by-name/userdata /data noatime nosuid nodev discard,inline_xattr
     wait /dev/block/platform/msm_sdcc.1/by-name/cache
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime errors=continue,noauto_da_alloc,discard,journal_async_commit
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime errors=continue,noauto_da_alloc,disc
     mount f2fs /dev/block/platform/msm_sdcc.1/by-name/cache /cache noatime nosuid nodev discard,inline_xattr
+
     restorecon_recursive /persist
     setprop ro.crypto.fuse_sdcard true
 
-    # Keeping following partitions outside fstab file. As user may not have
-    # these partition flashed on the device. Failure to mount any partition in fstab file
-    # results in failure to launch late-start class.
-
-#    wait /dev/block/platform/msm_sdcc.1/by-name/cache
-#    check_fs /dev/block/platform/msm_sdcc.1/by-name/cache ext4
-#    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
-
-    wait /dev/block/platform/msm_sdcc.1/by-name/persist
-    check_fs /dev/block/platform/msm_sdcc.1/by-name/persist ext4
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/persist /persist nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
-
-    wait /dev/block/platform/msm_sdcc.1/by-name/efs
-    check_fs /dev/block/platform/msm_sdcc.1/by-name/efs ext4
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/efs /efs nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
-     chown system radio /efs
-     chmod 0771 /efs
+    chown system radio /efs
+    chmod 0771 /efs
     restorecon -R /efs
 
-#    wait /dev/block/platform/msm_sdcc.1/by-name/apnhlos
-#    mount vfat /dev/block/platform/msm_sdcc.1/by-name/apnhlos /firmware ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
-
-#    wait /dev/block/platform/msm_sdcc.1/by-name/modem
-#    mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware-modem ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
-     write /sys/kernel/boot_adsp/boot 1
-     setprop qcom.audio.init complete
+    write /sys/kernel/boot_adsp/boot 1
+    setprop qcom.audio.init complete
 
 on post-fs-data
     mkdir /data/tombstones 0771 system system
@@ -438,19 +417,6 @@ on boot
     chown system radio /sys/class/sec/sec_ir/ir_send_result
 # Permission for HALL IC
     chown system radio /sys/class/sec/sec_key/hall_detect
-# Define TCP buffer sizes for various networks
-#   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
-    setprop net.tcp.buffersize.default 4096,87380,704512,4096,16384,110208
-    setprop net.tcp.buffersize.wifi    524288,1048576,2560000,524288,1048576,2560000
-    setprop net.tcp.buffersize.lte     524288,1048576,2560000,524288,1048576,2560000
-    setprop net.tcp.buffersize.umts    4094,87380,704512,4096,16384,110208
-    setprop net.tcp.buffersize.hspa    4092,87380,704512,4096,16384,262144
-    setprop net.tcp.buffersize.hsupa   4092,87380,704512,4096,16384,262144
-    setprop net.tcp.buffersize.hsdpa   4092,87380,704512,4096,16384,110208
-    setprop net.tcp.buffersize.hspap   4092,87380,704512,4096,16384,262144
-    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
-    setprop net.tcp.buffersize.gprs    4096,30000,30000,4096,8760,11680
-    setprop net.tcp.buffersize.evdo    4094,87380,262144,4096,16384,262144
 
 #wifi display
     write /proc/sys/net/core/rmem_max   1048576
@@ -495,17 +461,17 @@ on boot
     # Vibetonz
     chmod 0660 /dev/tspdrv
     chown root shell /dev/tspdrv
-	chown system system /sys/class/timed_output/vibrator/pwm_value
-	chmod 0660 /sys/class/timed_output/vibrator/pwm_value
+  chown system system /sys/class/timed_output/vibrator/pwm_value
+  chmod 0660 /sys/class/timed_output/vibrator/pwm_value
     chown system system /sys/class/timed_output/vibrator/pwm_max
-	chmod 0660 /sys/class/timed_output/vibrator/pwm_max
-	chown system system /sys/class/timed_output/vibrator/pwm_min
-	chmod 0660 /sys/class/timed_output/vibrator/pwm_min
-	chown system system /sys/class/timed_output/vibrator/pwm_default
-	chmod 0660 /sys/class/timed_output/vibrator/pwm_default
-	chown system system /sys/class/timed_output/vibrator/pwm_threshold
-	chmod 0660 /sys/class/timed_output/vibrator/pwm_threshold
-    
+  chmod 0660 /sys/class/timed_output/vibrator/pwm_max
+  chown system system /sys/class/timed_output/vibrator/pwm_min
+  chmod 0660 /sys/class/timed_output/vibrator/pwm_min
+  chown system system /sys/class/timed_output/vibrator/pwm_default
+  chmod 0660 /sys/class/timed_output/vibrator/pwm_default
+  chown system system /sys/class/timed_output/vibrator/pwm_threshold
+  chmod 0660 /sys/class/timed_output/vibrator/pwm_threshold
+
     # Panel color temperature
     chmod 0660 /sys/class/lcd/panel/panel_colors
     chown system system /sys/class/lcd/panel/panel_colors
@@ -543,9 +509,9 @@ on property:sys.boot_completed=1
     start qrngp
 
 service qseecomd /system/bin/qseecomd
-   class late_start
+   class core
    user root
-   group system
+   group root
 
 service mpdecision /system/bin/mpdecision --avg_comp
    user root
@@ -572,4 +538,3 @@ service ppd /system/bin/mm-pp-daemon
    user system
    socket pps stream 0660 system system graphics
    group system graphics
-

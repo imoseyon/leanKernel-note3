@@ -136,7 +136,6 @@
 /dev/msm_preproc_ctl      0660   system     audio
 /dev/msm_rtac             0660   system     audio
 /dev/msm_voicememo        0660   system     audio
-/dev/radio0               0640   fm_radio   fm_radio
 /dev/smd3                 0660   bluetooth  net_bt_stack
 /dev/smd2                 0660   bluetooth  net_bt_stack
 /dev/ttyHSL1              0660   system     system
@@ -210,18 +209,6 @@ v/ppp                  0660   radio      vpn
 /sys/devices/f9967000.spi/spi_master/spi11/spi11.0/iio:device*   buffer/enable 0660   system    system
 /sys/devices/f9967000.spi/spi_master/spi11/spi11.0/iio:device*   buffer/length 0660   system    system
 /sys/devices/f9924000.i2c/i2c-2/2-0020/input/input*   enabled     0660  system  system
-
-
-# Felica
-/dev/felica               0660    mfc   system
-/dev/felica_pon           0660    mfc   system
-/dev/felica_cen           0660    mfc   felicalock
-/dev/felica_rfs           0440    mfc   system
-/dev/felica_rws           0660    mfc   system
-/dev/felica_ant           0660    mfc   system
-/dev/felica_int_poll      0400    mfc   system
-/dev/felica_uid           0220    mfc   system
-/dev/felica_uicc          0660    mfc   system
 
 # NFC
 # JPN Felica Temporary Workaround
@@ -367,4 +354,3 @@ v/ppp                  0660   radio      vpn
 /sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* dmp_firmware                       0660   system     radio
 /sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* pedometer_int_thresh               0660   system     radio
 /sys/devices/f9968000.i2c/i2c-12/12-0068/iio:device* pedometer_step_thresh              0660   system     radio
-
