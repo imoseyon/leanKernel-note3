@@ -39,7 +39,8 @@ on fs
     write /sys/devices/msm_sdcc.1/mmc_host/mmc1/power/control on
     write /sys/devices/msm_sdcc.3/mmc_host/mmc2/power/control on
 
-    mount_all fstab.qcom
+    mount_all fstab.lk
+
     wait /dev/block/platform/msm_sdcc.1/by-name/system
     mount ext4 /dev/block/platform/msm_sdcc.1/by-name/system /system ro errors=panic
     mount f2fs /dev/block/platform/msm_sdcc.1/by-name/system /system ro inline_xattr
