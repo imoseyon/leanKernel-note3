@@ -40,14 +40,6 @@ on fs
     write /sys/devices/msm_sdcc.3/mmc_host/mmc2/power/control on
 
     mount_all fstab.qcom
-
-    wait /dev/block/platform/msm_sdcc.1/by-name/userdata
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/userdata /data nosuid nodev noatime noauto_da_alloc,discard,journal_as
-    mount f2fs /dev/block/platform/msm_sdcc.1/by-name/userdata /data noatime nosuid nodev discard,inline_xattr
-    wait /dev/block/platform/msm_sdcc.1/by-name/cache
-    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime errors=continue,noauto_da_alloc,disc
-    mount f2fs /dev/block/platform/msm_sdcc.1/by-name/cache /cache noatime nosuid nodev discard,inline_xattr
-
     restorecon_recursive /persist
     setprop ro.crypto.fuse_sdcard true
 
