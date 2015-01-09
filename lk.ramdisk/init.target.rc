@@ -41,14 +41,36 @@ on fs
 
     mount_all fstab.qcom
     restorecon_recursive /persist
+    restorecon_recursive /efs
+
     setprop ro.crypto.fuse_sdcard true
 
-    chown system radio /efs
-    chmod 0771 /efs
-    restorecon -R /efs
+    # Keeping following partitions outside fstab file. As user may not have
+    # these partition flashed on the device. Failure to mount any partition in fstab file
+    # results in failure to launch late-start class.
 
-    write /sys/kernel/boot_adsp/boot 1
-    setprop qcom.audio.init complete
+#    wait /dev/block/platform/msm_sdcc.1/by-name/cache
+#    check_fs /dev/block/platform/msm_sdcc.1/by-name/cache ext4
+#    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/persist
+    check_fs /dev/block/platform/msm_sdcc.1/by-name/persist ext4
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/persist /persist nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/efs
+    check_fs /dev/block/platform/msm_sdcc.1/by-name/efs ext4
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/efs /efs nosuid nodev noatime noauto_da_alloc,discard,journal_async_commit,errors=panic,context=u:object_r:efs_file:s0
+     chown system radio /efs
+     chmod 0771 /efs
+    restorecon -R /efs
+#firmware_file
+    wait /dev/block/platform/msm_sdcc.1/by-name/apnhlos
+    mount vfat /dev/block/platform/msm_sdcc.1/by-name/apnhlos /firmware ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337,context=u:object_r:firmware_file:s0
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/modem
+    mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware-modem ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337,context=u:object_r:firmware_file:s0
+     write /sys/kernel/boot_adsp/boot 1
+     setprop qcom.audio.init complete
 
 on post-fs-data
     mkdir /data/tombstones 0771 system system
@@ -157,6 +179,23 @@ on boot
     chmod 664  /sys/class/kgsl/kgsl-3d0/min_pwrlevel
     chown radio system /sys/class/kgsl/kgsl-3d0/gpu_available_frequencies
     chmod 664  /sys/class/kgsl/kgsl-3d0/gpu_available_frequencies
+
+    chown radio system /sys/class/devfreq/qcom,cpubw.34/available_frequencies
+    chmod 664 /sys/class/devfreq/qcom,cpubw.34/available_frequencies
+    chown radio system /sys/class/devfreq/qcom,cpubw.34/available_governors
+    chmod 664 /sys/class/devfreq/qcom,cpubw.34/available_governors
+    chown radio system /sys/class/devfreq/qcom,cpubw.34/governor
+    chmod 664 /sys/class/devfreq/qcom,cpubw.34/governor
+    chown radio system /sys/class/devfreq/qcom,cpubw.34/max_freq
+    chmod 664 /sys/class/devfreq/qcom,cpubw.34/max_freq
+    chown radio system /sys/class/devfreq/qcom,cpubw.34/min_freq
+    chmod 664 /sys/class/devfreq/qcom,cpubw.34/min_freq
+
+    # SEC PM sysfs node
+    chown system radio /sys/devices/system/soc/soc0/soc_iddq
+    chmod 0444 /sys/devices/system/soc/soc0/soc_iddq
+    chown system radio /sys/devices/system/soc/soc0/soc_pvs
+    chmod 0444 /sys/devices/system/soc/soc0/soc_pvs
 
     # Auto Brightness
     chown system system  /sys/class/backlight/panel/auto_brightness
@@ -363,6 +402,29 @@ on boot
     chown system radio /sys/class/sensors/ssp_sensor/ssp_flush
     chmod 0600 /dev/batch_io
     chown system system /dev/batch_io
+
+    # IIO devices for SensorHub
+    chmod 0600 /dev/iio:device0
+    chown system system /dev/iio:device0
+    chmod 0600 /dev/iio:device1
+    chown system system /dev/iio:device1
+    chmod 0600 /dev/iio:device2
+    chown system system /dev/iio:device2
+    chmod 0600 /dev/iio:device3
+    chown system system /dev/iio:device3
+    chmod 0600 /dev/iio:device4
+    chown system system /dev/iio:device4
+    chown system system /sys/bus/iio/devices/iio:device0/buffer/length
+    chown system system /sys/bus/iio/devices/iio:device0/buffer/enable
+    chown system system /sys/bus/iio/devices/iio:device1/buffer/length
+    chown system system /sys/bus/iio/devices/iio:device1/buffer/enable
+    chown system system /sys/bus/iio/devices/iio:device2/buffer/length
+    chown system system /sys/bus/iio/devices/iio:device2/buffer/enable
+    chown system system /sys/bus/iio/devices/iio:device3/buffer/length
+    chown system system /sys/bus/iio/devices/iio:device3/buffer/enable
+    chown system system /sys/bus/iio/devices/iio:device4/buffer/length
+    chown system system /sys/bus/iio/devices/iio:device4/buffer/enable
+
 # Gesture_sensor
     chown system radio /sys/class/sensors/gesture_sensor/vendor
     chown system radio /sys/class/sensors/gesture_sensor/name
@@ -410,10 +472,6 @@ on boot
 # Permission for HALL IC
     chown system radio /sys/class/sec/sec_key/hall_detect
 
-#wifi display
-    write /proc/sys/net/core/rmem_max   1048576
-    write /proc/sys/net/core/wmem_max   2097152
-
 # HDCP 2.x
     mkdir /data/system/hdcp2 0775 system system
 
@@ -453,17 +511,17 @@ on boot
     # Vibetonz
     chmod 0660 /dev/tspdrv
     chown root shell /dev/tspdrv
-  chown system system /sys/class/timed_output/vibrator/pwm_value
-  chmod 0660 /sys/class/timed_output/vibrator/pwm_value
+	chown system system /sys/class/timed_output/vibrator/pwm_value
+	chmod 0660 /sys/class/timed_output/vibrator/pwm_value
     chown system system /sys/class/timed_output/vibrator/pwm_max
-  chmod 0660 /sys/class/timed_output/vibrator/pwm_max
-  chown system system /sys/class/timed_output/vibrator/pwm_min
-  chmod 0660 /sys/class/timed_output/vibrator/pwm_min
-  chown system system /sys/class/timed_output/vibrator/pwm_default
-  chmod 0660 /sys/class/timed_output/vibrator/pwm_default
-  chown system system /sys/class/timed_output/vibrator/pwm_threshold
-  chmod 0660 /sys/class/timed_output/vibrator/pwm_threshold
-
+	chmod 0660 /sys/class/timed_output/vibrator/pwm_max
+	chown system system /sys/class/timed_output/vibrator/pwm_min
+	chmod 0660 /sys/class/timed_output/vibrator/pwm_min
+	chown system system /sys/class/timed_output/vibrator/pwm_default
+	chmod 0660 /sys/class/timed_output/vibrator/pwm_default
+	chown system system /sys/class/timed_output/vibrator/pwm_threshold
+	chmod 0660 /sys/class/timed_output/vibrator/pwm_threshold
+    
     # Panel color temperature
     chmod 0660 /sys/class/lcd/panel/panel_colors
     chown system system /sys/class/lcd/panel/panel_colors
@@ -479,31 +537,10 @@ service qcamerasvr /system/bin/mm-qcamera-daemon
     user camera
     group camera system inet input graphics radio sdcard_rw sdcard_r media_rw shell log
 
-#start GNSS/Sensor interface daemon
-service gsiff_daemon /system/bin/gsiff_daemon
-    class late_start
-    user system
-    group gps qcom_oncrpc net_raw
-
-service qrngd /system/bin/qrngd -f
-   class main
-   user root
-   group root
-
-service qrngp /system/bin/qrngp
-    class main
-    user root
-    group root
-    oneshot
-    disabled
-
-on property:sys.boot_completed=1
-    start qrngp
-
 service qseecomd /system/bin/qseecomd
-   class core
+   class late_start
    user root
-   group root
+   group system
 
 service mpdecision /system/bin/mpdecision --avg_comp
    user root
@@ -525,8 +562,3 @@ service audiod /system/bin/audiod
    user system
    group system
 
-service ppd /system/bin/mm-pp-daemon
-   class late_start
-   user system
-   socket pps stream 0660 system system graphics
-   group system graphics

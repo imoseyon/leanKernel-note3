@@ -65,6 +65,7 @@ nfc.                    u:object_r:nfc_prop:s0
 #line 1 "device/qcom/sepolicy/common/property_contexts"
 wc_transport.              u:object_r:bluetooth_prop:s0
 usb_uicc.                  u:object_r:uicc_prop:s0
+sys.ims.                   u:object_r:qcom_ims_prop:s0
 #line 1 "vendor/cm/sepolicy/property_contexts"
 service.adb.tcp.port          u:object_r:adbtcp_prop:s0
 recovery.perf.mode            u:object_r:recovery_prop:s0

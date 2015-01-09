@@ -132,5 +132,9 @@ cneservice                                     u:object_r:cne_service:s0
 vendor.qcom.PeripheralManager                  u:object_r:per_mgr_service:s0
 wbc_service                                    u:object_r:wbc_service:s0
 dun                                            u:object_r:dun_service:s0
+DigitalPen                                     u:object_r:digitalpen_service:s0
+qti.ims.connectionmanagerservice               u:object_r:imscm_service:s0
+com.qti.snapdragon.sdk.display.IColorService   u:object_r:color_service:s0
 #line 1 "vendor/cm/sepolicy/service_contexts"
 edgegestureservice                        u:object_r:system_server_service:s0
+themes                                    u:object_r:system_server_service:s0
