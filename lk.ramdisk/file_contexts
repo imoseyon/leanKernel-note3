@@ -599,9 +599,8 @@
 # RIL
 /efs/FactoryApp(/.*)?  					u:object_r:efs_file:s0
 /efs/imei	  					u:object_r:efs_file:s0
-/efs/mps_code.dat					u:object_r:efs_file:s0
-#line 1 "vendor/cm/sepolicy/file_contexts"
-/cache/dalvik-cache(/.*)? u:object_r:dalvikcache_data_file:s0
+/efs/mps_code.dat					u:object_r:efs_file:s0/cache/dalvik-cache(/.*)? u:object_r:dalvikcache_data_file:s0
+#line 2 "vendor/cm/sepolicy/file_contexts"
 
 # Auditd is a logging daemon. Put it into logd's context
 /system/bin/auditd        u:object_r:logd_exec:s0
