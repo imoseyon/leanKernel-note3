@@ -138,3 +138,4 @@ com.qti.snapdragon.sdk.display.IColorService   u:object_r:color_service:s0
 #line 1 "vendor/cm/sepolicy/service_contexts"
 edgegestureservice                        u:object_r:system_server_service:s0
 themes                                    u:object_r:system_server_service:s0
+torch                                     u:object_r:system_server_service:s0
