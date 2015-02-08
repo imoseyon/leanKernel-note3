@@ -39,7 +39,17 @@ on fs
     write /sys/devices/msm_sdcc.1/mmc_host/mmc1/power/control on
     write /sys/devices/msm_sdcc.3/mmc_host/mmc2/power/control on
 
-    mount_all fstab.qcom
+    mount_all fstab.lk
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/system
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/system /system ro barrier=1
+    mount f2fs /dev/block/platform/msm_sdcc.1/by-name/system /system ro inline_xattr
+    wait /dev/block/platform/msm_sdcc.1/by-name/userdata
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/userdata /data nosuid nodev noatime noauto_da_alloc,data=ordered,nomblk_io_submit,barrier=1
+    mount f2fs /dev/block/platform/msm_sdcc.1/by-name/userdata /data noatime nosuid nodev discard,inline_xattr
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime noauto_da_alloc,nomblk_io_submit,data=ordered
+    mount f2fs /dev/block/platform/msm_sdcc.1/by-name/cache /cache noatime nosuid nodev discard,inline_xattr
+
     restorecon_recursive /persist
     restorecon_recursive /efs
 
