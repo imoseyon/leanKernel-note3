@@ -3643,6 +3643,7 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		/* Wait for pending detect work to be completed */
 		if (!(host->caps & MMC_CAP_NEEDS_POLL))
 			flush_work(&host->detect.work);
+	case PM_RESTORE_PREPARE:
 
 		spin_lock_irqsave(&host->lock, flags);
 		host->rescan_disable = 1;
